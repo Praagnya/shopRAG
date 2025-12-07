@@ -16,6 +16,8 @@ dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.2.1",
     "gradio>=6.0.2",
+    "psycopg2-binary>=2.9.11",
+    "pgvector>=0.4.2",
 ]
 
 [build-system]
