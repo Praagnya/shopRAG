@@ -1,4 +1,4 @@
-# MIS 547 – Group 4 Retail RAG Chatbot Project (Mid-Semester Update)
+# MIS 547 – Group 4 shopRAG: Retail RAG Chatbot Project
 
 ## Team Members
 
@@ -15,16 +15,19 @@
 ### Prerequisites
 
 **Option 1: Using uv (Recommended)**
+
 - [uv](https://github.com/astral-sh/uv) package manager
 - Python 3.10+ will be automatically installed by uv if not present
 
 **Option 2: Using pip**
+
 - Python 3.10 or higher must be manually installed
 - pip (usually comes with Python)
 
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/Praagnya/shopRAG.git
 cd shopRAG
@@ -33,6 +36,7 @@ cd shopRAG
 2. Install dependencies:
 
 **Using uv (Recommended - No Python install required):**
+
 ```bash
 # Install uv if you don't have it
 curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
@@ -43,6 +47,7 @@ uv sync
 ```
 
 **Using pip (Requires Python 3.10+ already installed):**
+
 ```bash
 # Create a virtual environment
 python3.10 -m venv .venv
@@ -55,6 +60,7 @@ pip install -e .
 ```
 
 3. Verify installation:
+
 ```bash
 python --version  # Should show Python 3.10.x
 ```
