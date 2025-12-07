@@ -1,7 +1,7 @@
 [project]
-name = "chatbot"
+name = "shoprag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Retail RAG Chatbot for Amazon Reviews"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -10,4 +10,16 @@ dependencies = [
     "pandas>=2.3.3",
     "sentence-transformers>=5.1.2",
     "tqdm>=4.67.1",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "pydantic>=2.0.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.2.1",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["backend"]

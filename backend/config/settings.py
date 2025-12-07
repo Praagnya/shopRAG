@@ -1,8 +1,12 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Project paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 DATA_DIR = BASE_DIR / "data"
 CHROMA_DB_PATH = DATA_DIR / "chroma_db"
 
@@ -35,7 +39,13 @@ CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]
 DATASET_NAME = "McAuley-Lab/Amazon-Reviews-2023"
 SUBSET_REVIEWS = "raw_review_Cell_Phones_and_Accessories"
 SUBSET_META = "raw_meta_Cell_Phones_and_Accessories"
-MAX_REVIEWS_TO_PROCESS = 10000  # Limit for testing, set to None for all
+MAX_PRODUCTS_TO_LOAD = 10  # Number of products to load (will get all reviews for these products)
+MAX_REVIEWS_PER_PRODUCT = 5  # Max reviews per product, set to None for all reviews
+MAX_REVIEWS_TO_PROCESS = None  # Max reviews overall, set to None for all reviews of selected products
+
+# Ingestion Performance
+BATCH_SIZE = 512  # Embedding batch size (increase for better throughput)
+SAVE_CHECKPOINT_EVERY = 1000  # Save checkpoint every N reviews
 
 # Logging
 LOG_LEVEL = "INFO"

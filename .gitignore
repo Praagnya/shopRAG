@@ -13,6 +13,7 @@ ENV/
 .env
 
 # Environment Variables & Secrets
+.env.example
 .env
 .env.local
 .env.*.local
