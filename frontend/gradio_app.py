@@ -41,13 +41,11 @@ print(f"✓ Loaded {len(products_cache)} products")
 
 
 def extract_asin_from_choice(choice):
-    """Extract ASIN from dropdown choice."""
-    if choice == "All Products" or not choice:
+    """Extract ASIN from input (now expects direct ASIN or empty string)."""
+    if not choice or choice.strip() == "":
         return None
-    # Extract ASIN from "Title (ASIN)" format
-    if "(" in choice and ")" in choice:
-        return choice.split("(")[-1].strip(")")
-    return None
+    # Return the ASIN directly (user types it in)
+    return choice.strip()
 
 
 def format_product_info(product_metadata):
@@ -163,21 +161,23 @@ def chat_function(message, history, selected_product, top_k):
 # Create Gradio Interface
 with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
     gr.Markdown(
-        """
+        f"""
         # 🛍️ shopRAG - Product Review Chatbot
         Ask questions about product reviews and get AI-powered answers!
+
+        **Database:** {len(products_cache):,} products with 170k+ reviews
         """
     )
 
     with gr.Row():
         # Left column: Chat interface
         with gr.Column(scale=2):
-            # Product selector
-            product_dropdown = gr.Dropdown(
-                choices=product_choices,
-                value="All Products",
-                label="📦 Select Product",
-                info="Choose a specific product or search all products"
+            # Product selector - using Textbox instead of Dropdown for 10k products
+            product_dropdown = gr.Textbox(
+                value="",
+                label="📦 Product ASIN (optional)",
+                placeholder="Enter product ASIN to filter to specific product, or leave empty to search all products",
+                info="Example: B07XYZ1234"
             )
 
             # Top-k slider
@@ -211,20 +211,27 @@ with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
         with gr.Column(scale=1):
             product_info = gr.Markdown("### Select a product to see details")
 
-    # Example questions
-    gr.Markdown("### 💡 Example Questions:")
-    gr.Examples(
-        examples=[
-            "How is the quality of this case?",
-            "Is it worth the price?",
-            "Do customers complain about durability?",
-            "How well does it protect the phone?",
-            "What do people say about the material?",
-            "Are there any issues with the fit?",
-        ],
-        inputs=msg,
-        label="Click to try:"
-    )
+    # Example questions and ASINs
+    with gr.Row():
+        with gr.Column():
+            gr.Markdown("### 💡 Example Questions:")
+            gr.Examples(
+                examples=[
+                    "How is the quality of this case?",
+                    "Is it worth the price?",
+                    "Do customers complain about durability?",
+                    "How well does it protect the phone?",
+                    "What do people say about the material?",
+                    "Are there any issues with the fit?",
+                ],
+                inputs=msg,
+                label="Click to try:"
+            )
+        with gr.Column():
+            # Show some example ASINs
+            example_asins = list(products_cache.keys())[:5]
+            example_list = "\n".join([f"- `{asin}`: {products_cache[asin]['title'][:50]}..." for asin in example_asins])
+            gr.Markdown(f"### 📦 Example Product ASINs:\n{example_list}\n\n*Leave ASIN blank to search all products*")
 
     # Event handlers
     submit_btn.click(
@@ -249,11 +256,11 @@ with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
 
     clear_btn.click(lambda: ([], ""), None, [chatbot, product_info])
 
-    # Update product info when dropdown changes
+    # Update product info when ASIN is entered
     product_dropdown.change(
-        lambda choice: format_product_info(
-            products_cache.get(extract_asin_from_choice(choice), {})
-        ) if extract_asin_from_choice(choice) else "### All Products\nSearching across all available products.",
+        lambda asin_input: format_product_info(
+            products_cache.get(asin_input.strip(), {})
+        ) if asin_input.strip() and asin_input.strip() in products_cache else "### All Products\nSearching across all available products." if not asin_input.strip() else f"### Product Not Found\nASIN '{asin_input.strip()}' not found in database.",
         inputs=product_dropdown,
         outputs=product_info
     )
@@ -264,8 +271,8 @@ if __name__ == "__main__":
     print("🚀 Starting shopRAG Gradio Interface...")
     print("="*80)
     demo.launch(
-        server_name="127.0.0.1",
+        server_name="0.0.0.0",  # Allow external connections
         server_port=7860,
-        share=False,
+        share=True,  # Create public Gradio share link
         show_error=True
     )
