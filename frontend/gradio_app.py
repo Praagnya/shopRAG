@@ -137,17 +137,24 @@ def chat_function(message, history, selected_product, top_k):
         return formatted_history, product_info
 
     except ValueError as e:
-        # Guardrail validation errors
-        error_msg = f"Validation Error: {str(e).replace('Invalid query: ', '')}"
+        # Guardrail validation errors - user-friendly messages
+        error_str = str(e).replace('Invalid query: ', '')
+
+        # Customize messages based on error type
+        if "too long" in error_str.lower():
+            error_msg = "Sorry, your query is too long. Please keep it under 500 characters."
+        elif "too short" in error_str.lower():
+            error_msg = "Sorry, your query is too short. Please provide at least 3 characters."
+        elif "empty" in error_str.lower():
+            error_msg = "Please enter a question to continue."
+        elif "rate limit" in error_str.lower():
+            error_msg = "Too many requests. Please wait a moment before trying again."
+        else:
+            error_msg = f"Unable to process your query. Please try rephrasing."
+
         if history is None:
             history = []
 
-    except Exception as e:
-        # Other errors
-        error_msg = f"Error: {str(e)}"
-        if history is None:
-            history = []
-        
         # Convert history to dict format
         formatted_history = []
         for item in history:
@@ -159,7 +166,29 @@ def chat_function(message, history, selected_product, top_k):
             elif isinstance(item, list) and len(item) == 2:
                 formatted_history.append({"role": "user", "content": item[0]})
                 formatted_history.append({"role": "assistant", "content": item[1]})
-        
+
+        formatted_history.append({"role": "user", "content": message})
+        formatted_history.append({"role": "assistant", "content": error_msg})
+        return formatted_history, ""
+
+    except Exception as e:
+        # Other errors
+        error_msg = f"An error occurred while processing your request. Please try again."
+        if history is None:
+            history = []
+
+        # Convert history to dict format
+        formatted_history = []
+        for item in history:
+            if isinstance(item, dict) and 'role' in item:
+                formatted_history.append(item)
+            elif isinstance(item, tuple) and len(item) == 2:
+                formatted_history.append({"role": "user", "content": item[0]})
+                formatted_history.append({"role": "assistant", "content": item[1]})
+            elif isinstance(item, list) and len(item) == 2:
+                formatted_history.append({"role": "user", "content": item[0]})
+                formatted_history.append({"role": "assistant", "content": item[1]})
+
         formatted_history.append({"role": "user", "content": message})
         formatted_history.append({"role": "assistant", "content": error_msg})
         return formatted_history, ""
