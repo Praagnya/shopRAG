@@ -4,6 +4,7 @@ from pathlib import Path
 from backend.services.embedder import get_embedder
 from backend.services.retriever_postgres import get_postgres_retriever
 from backend.services.llm_client import get_llm_client
+from backend.services.guardrails import get_guardrails
 from backend.config.settings import DATA_DIR
 
 
@@ -24,6 +25,7 @@ class RAGPipeline:
         print(f"Loaded product cache with {len(self.product_cache)} products")
 
         # Initialize services
+        self.guardrails = get_guardrails()
         self.embedder = get_embedder()
         self.retriever = get_postgres_retriever()
         self.llm_client = get_llm_client()
@@ -43,6 +45,13 @@ class RAGPipeline:
         print(f"\n[RAG] Processing query: {user_query}")
         if product_asin:
             print(f"[RAG] Filtering to product ASIN: {product_asin}")
+
+        # Step 0: Validate input with guardrails
+        print("[RAG] Step 0: Validating query with guardrails...")
+        is_valid, error_msg = self.guardrails.validate_query(user_query)
+        if not is_valid:
+            print(f"[RAG] ⚠️  Query validation failed: {error_msg}")
+            raise ValueError(f"Invalid query: {error_msg}")
 
         # Step 1: Embed the query
         print("[RAG] Step 1: Embedding query...")

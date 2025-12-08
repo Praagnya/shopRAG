@@ -136,8 +136,15 @@ def chat_function(message, history, selected_product, top_k):
 
         return formatted_history, product_info
 
+    except ValueError as e:
+        # Guardrail validation errors
+        error_msg = f"Validation Error: {str(e).replace('Invalid query: ', '')}"
+        if history is None:
+            history = []
+
     except Exception as e:
-        error_msg = f"❌ Error: {str(e)}"
+        # Other errors
+        error_msg = f"Error: {str(e)}"
         if history is None:
             history = []
         
