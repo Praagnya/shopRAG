@@ -58,16 +58,20 @@ def load_product_metadata():
         if not asin:
             continue
 
+        # Truncate fields to fit database schema
+        main_cat = product.get('main_category', '')[:255] if product.get('main_category') else ''
+        store_name = product.get('store', '')[:255] if product.get('store') else ''
+
         all_products.append({
             'asin': asin,
             'title': product.get('title', 'Unknown Product'),
-            'main_category': product.get('main_category', ''),
+            'main_category': main_cat,
             'average_rating': product.get('average_rating'),
             'rating_number': product.get('rating_number', 0),
             'price': product.get('price'),
             'features': product.get('features', [])[:5],
             'description': product.get('description', [''])[0][:500] if product.get('description') else '',
-            'store': product.get('store', ''),
+            'store': store_name,
         })
 
     print(f"Total products in dataset: {len(all_products)}")
@@ -105,16 +109,21 @@ def insert_products_to_db(product_cache, conn):
 
     products_data = []
     for asin, product in product_cache.items():
+        # Truncate fields to fit database schema
+        main_category = product['main_category'][:255] if product['main_category'] else ''
+        store = product['store'][:255] if product['store'] else ''
+        price_str = str(product.get('price', ''))[:50]
+
         products_data.append((
             asin,
             product['title'],
-            product['main_category'],
+            main_category,
             product['average_rating'],
             product['rating_number'],
-            str(product.get('price', '')),
+            price_str,
             json.dumps(product['features']),
             product['description'],
-            product['store']
+            store
         ))
 
     execute_batch(cursor, """
