@@ -16,7 +16,7 @@ CHROMA_DB_PATH.mkdir(exist_ok=True)
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = "gpt-3.5-turbo"  # or "gpt-4"
+OPENAI_MODEL = "gpt-5-mini"  # or "gpt-4"
 
 # Embedding Configuration
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
@@ -45,7 +45,7 @@ SUBSET_META = "raw_meta_Cell_Phones_and_Accessories"
 
 # For production (Digital Ocean): uncomment these
 MAX_PRODUCTS_TO_LOAD = 10000  # Number of products to load (will get all reviews for these products)
-MAX_REVIEWS_PER_PRODUCT = 50  # Max reviews per product (50 x 10k = 500k total reviews)
+MAX_REVIEWS_PER_PRODUCT = 100  # Max reviews per product (50 x 10k = 500k total reviews)
 MAX_REVIEWS_TO_PROCESS = None  # Max reviews overall, set to None for all reviews of selected products
 
 # Ingestion Performance
