@@ -55,7 +55,7 @@ for idx, review in enumerate(reviews_dataset):
     if 'images' in review and review['images']:
         has_images_count += 1
 
-print(f"✓ Analyzed {len(reviews_sample)} reviews\n")
+print(f"Analyzed {len(reviews_sample)} reviews\n")
 
 # Print sample review structure
 print("="*80)
@@ -89,7 +89,7 @@ if ratings:
     for rating in sorted(rating_counts.keys(), reverse=True):
         count = rating_counts[rating]
         bar = "█" * int(count/len(ratings) * 50)
-        print(f"{rating:.1f} ⭐: {count:4d} ({count/len(ratings)*100:5.1f}%) {bar}")
+        print(f"{rating:.1f}: {count:4d} ({count/len(ratings)*100:5.1f}%) {bar}")
     print(f"Average rating: {sum(ratings)/len(ratings):.2f}")
 
 # Text length statistics
@@ -139,7 +139,7 @@ for idx, meta in enumerate(metadata_dataset):
     if 'main_category' in meta and meta['main_category']:
         categories_list.append(meta['main_category'])
 
-print(f"✓ Analyzed {len(meta_sample)} product metadata entries\n")
+print(f"Analyzed {len(meta_sample)} product metadata entries\n")
 
 # Print sample metadata structure
 print("="*80)

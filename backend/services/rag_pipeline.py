@@ -50,7 +50,7 @@ class RAGPipeline:
         print("[RAG] Step 0: Validating query with guardrails...")
         is_valid, error_msg = self.guardrails.validate_query(user_query)
         if not is_valid:
-            print(f"[RAG] ⚠️  Query validation failed: {error_msg}")
+            print(f"[RAG] Query validation failed: {error_msg}")
             raise ValueError(f"Invalid query: {error_msg}")
 
         # Step 1: Embed the query

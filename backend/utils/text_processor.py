@@ -50,7 +50,7 @@ def combine_review_with_product(review: Dict[str, Any], product_metadata: Dict[s
 
     # Add review rating
     if 'rating' in review and review['rating']:
-        parts.append(f"Rating: {review['rating']}/5 ⭐")
+        parts.append(f"Rating: {review['rating']}/5")
 
     # Add review title
     if 'title' in review and review['title']:

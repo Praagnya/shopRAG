@@ -39,14 +39,11 @@ CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]
 DATASET_NAME = "McAuley-Lab/Amazon-Reviews-2023"
 SUBSET_REVIEWS = "raw_review_Cell_Phones_and_Accessories"
 SUBSET_META = "raw_meta_Cell_Phones_and_Accessories"
-# For local testing: use small numbers
-# MAX_PRODUCTS_TO_LOAD = 10
-# MAX_REVIEWS_PER_PRODUCT = 5
 
-# For production (Digital Ocean): uncomment these
-MAX_PRODUCTS_TO_LOAD = 10000  # Number of products to load (will get all reviews for these products)
-MAX_REVIEWS_PER_PRODUCT = 100  # Max reviews per product (50 x 10k = 500k total reviews)
-MAX_REVIEWS_TO_PROCESS = None  # Max reviews overall, set to None for all reviews of selected products
+# Ingestion limits
+MAX_PRODUCTS_TO_LOAD = 20000  # Load 20k most recent products
+MAX_REVIEWS_PER_PRODUCT = 100  # 100 reviews per product
+MAX_REVIEWS_TO_PROCESS = None  # Process all reviews for selected products
 
 # Ingestion Performance
 BATCH_SIZE = 512  # Embedding batch size (increase for better throughput)

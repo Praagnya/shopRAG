@@ -28,7 +28,7 @@ class InputGuardrails:
     def __init__(self):
         """Initialize guardrails."""
         self.rate_limit_store = {}
-        print("✓ Input Guardrails initialized")
+        print("Input Guardrails initialized")
 
     def validate_query(self, query: str, user_id: str = "default") -> Tuple[bool, str]:
         """
@@ -72,7 +72,7 @@ class InputGuardrails:
 
         for pattern in self.PROMPT_INJECTION_PATTERNS:
             if re.search(pattern, query_lower, re.IGNORECASE):
-                print(f"⚠️  Blocked prompt injection attempt: {pattern}")
+                print(f"Blocked prompt injection attempt: {pattern}")
                 return True, "Invalid query detected"
 
         return False, ""
@@ -97,7 +97,7 @@ class InputGuardrails:
 
         # Check if limit exceeded
         if len(user_requests) >= max_requests:
-            print(f"⚠️  Rate limit exceeded for user: {user_id}")
+            print(f"Rate limit exceeded for user: {user_id}")
             return True, f"Too many requests. Maximum {max_requests} per {window_minutes} minute(s)"
 
         # Add current request

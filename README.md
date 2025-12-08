@@ -179,10 +179,10 @@ We use **Retrieval-Augmented Generation (RAG)** to avoid costly full-model fine-
 
 ### Advantages of RAG
 
-- ✅ **Lower cost & rapid updates** — Only the vector database must be refreshed as new reviews arrive.
-- ✅ **Reduced hallucinations** — The model answers using retrieved real reviews.
-- ✅ **Smaller model footprint** — No massive GPU training required.
-- ✅ **Trusted results** — Every response is grounded in customer feedback.
+- **Lower cost & rapid updates** — Only the vector database must be refreshed as new reviews arrive.
+- **Reduced hallucinations** — The model answers using retrieved real reviews.
+- **Smaller model footprint** — No massive GPU training required.
+- **Trusted results** — Every response is grounded in customer feedback.
 
 ---
 

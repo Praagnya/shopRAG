@@ -136,7 +136,7 @@ def ingest_reviews(product_cache):
         trust_remote_code=True
     )
 
-    print(f"✓ Dataset downloaded! Total reviews in dataset: {len(reviews_dataset)}")
+    print(f"Dataset downloaded! Total reviews in dataset: {len(reviews_dataset)}")
 
     # Filter to only reviews for our products (MUCH faster than streaming)
     print(f"\nFiltering reviews for {len(valid_asins)} products...")
@@ -145,7 +145,7 @@ def ingest_reviews(product_cache):
         desc="Filtering reviews"
     )
 
-    print(f"✓ Found {len(reviews_dataset)} reviews for your {len(valid_asins)} products!")
+    print(f"Found {len(reviews_dataset)} reviews for your {len(valid_asins)} products!")
 
     # Process reviews in batches
     batch_texts = []

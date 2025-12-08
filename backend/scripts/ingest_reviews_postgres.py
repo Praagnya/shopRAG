@@ -49,17 +49,17 @@ def load_product_metadata():
         trust_remote_code=True
     )
 
-    product_cache = {}
+    # Load all products first, then take the last N (most recent)
+    print(f"Loading all products from dataset...")
+    all_products = []
 
-    print(f"Loading first {MAX_PRODUCTS_TO_LOAD} products from {len(metadata_dataset)} total...")
-    for idx, product in enumerate(tqdm(metadata_dataset, desc="Loading products")):
+    for product in tqdm(metadata_dataset, desc="Loading products"):
         asin = product.get('parent_asin')
-
         if not asin:
             continue
 
-        # Store essential metadata
-        product_cache[asin] = {
+        all_products.append({
+            'asin': asin,
             'title': product.get('title', 'Unknown Product'),
             'main_category': product.get('main_category', ''),
             'average_rating': product.get('average_rating'),
@@ -68,10 +68,23 @@ def load_product_metadata():
             'features': product.get('features', [])[:5],
             'description': product.get('description', [''])[0][:500] if product.get('description') else '',
             'store': product.get('store', ''),
-        }
+        })
 
-        if len(product_cache) >= MAX_PRODUCTS_TO_LOAD:
-            break
+    print(f"Total products in dataset: {len(all_products)}")
+
+    # Take the last MAX_PRODUCTS_TO_LOAD products (most recent)
+    if len(all_products) > MAX_PRODUCTS_TO_LOAD:
+        selected_products = all_products[-MAX_PRODUCTS_TO_LOAD:]
+        print(f"Selected last {MAX_PRODUCTS_TO_LOAD} products (most recent)")
+    else:
+        selected_products = all_products
+        print(f"Using all {len(all_products)} products")
+
+    # Convert to dictionary
+    product_cache = {}
+    for product in selected_products:
+        asin = product.pop('asin')
+        product_cache[asin] = product
 
     print(f"Loaded {len(product_cache)} product metadata entries")
     return product_cache
@@ -113,7 +126,7 @@ def insert_products_to_db(product_cache, conn):
 
     conn.commit()
     cursor.close()
-    print(f"✓ Inserted {len(products_data)} products into database")
+    print(f"Inserted {len(products_data)} products into database")
 
 
 def ingest_reviews(product_cache, conn):
@@ -141,7 +154,7 @@ def ingest_reviews(product_cache, conn):
         trust_remote_code=True
     )
 
-    print(f"✓ Dataset downloaded! Total reviews in dataset: {len(reviews_dataset)}")
+    print(f"Dataset downloaded! Total reviews in dataset: {len(reviews_dataset)}")
 
     # Filter to only reviews for our products
     print(f"\nFiltering reviews for {len(valid_asins)} products...")
@@ -150,7 +163,7 @@ def ingest_reviews(product_cache, conn):
         desc="Filtering reviews"
     )
 
-    print(f"✓ Found {len(reviews_dataset)} reviews for your {len(valid_asins)} products!")
+    print(f"Found {len(reviews_dataset)} reviews for your {len(valid_asins)} products!")
 
     # Process reviews in batches
     batch_texts = []
@@ -294,7 +307,7 @@ def main():
     # Connect to PostgreSQL
     print(f"\nConnecting to PostgreSQL...")
     conn = psycopg2.connect(DATABASE_URL)
-    print("✓ Connected to PostgreSQL")
+    print("Connected to PostgreSQL")
 
     # Step 1: Load product metadata
     product_cache = load_product_metadata()

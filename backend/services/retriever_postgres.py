@@ -31,8 +31,8 @@ class PostgresVectorRetriever:
         cursor.close()
         conn.close()
 
-        print(f"✓ Connected to PostgreSQL")
-        print(f"✓ Database contains {count} reviews with embeddings")
+        print(f"Connected to PostgreSQL")
+        print(f"Database contains {count} reviews with embeddings")
 
     def retrieve(self, query_embedding: List[float], top_k: int = TOP_K_RESULTS,
                  filter_by_asin: str = None) -> Dict[str, Any]:
