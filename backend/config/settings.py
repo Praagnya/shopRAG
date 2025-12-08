@@ -41,7 +41,7 @@ SUBSET_REVIEWS = "raw_review_Cell_Phones_and_Accessories"
 SUBSET_META = "raw_meta_Cell_Phones_and_Accessories"
 
 # Ingestion limits
-MAX_PRODUCTS_TO_LOAD = 20000  # Load 20k most recent products
+MAX_PRODUCTS_TO_LOAD = 50000  # Load 50k most recent products (will add 30k new)
 MAX_REVIEWS_PER_PRODUCT = 100  # 100 reviews per product
 MAX_REVIEWS_TO_PROCESS = None  # Process all reviews for selected products
 
