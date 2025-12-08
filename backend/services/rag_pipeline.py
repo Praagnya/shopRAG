@@ -2,7 +2,7 @@ import json
 from typing import Dict, Any
 from pathlib import Path
 from backend.services.embedder import get_embedder
-from backend.services.retriever import get_retriever
+from backend.services.retriever_postgres import get_postgres_retriever
 from backend.services.llm_client import get_llm_client
 from backend.config.settings import DATA_DIR
 
@@ -25,7 +25,7 @@ class RAGPipeline:
 
         # Initialize services
         self.embedder = get_embedder()
-        self.retriever = get_retriever()
+        self.retriever = get_postgres_retriever()
         self.llm_client = get_llm_client()
         print("RAG Pipeline ready!")
 
