@@ -66,13 +66,12 @@ class PostgresVectorRetriever:
                     embedding <=> %s::vector AS distance
                 FROM reviews
                 WHERE asin = %s
-                  AND embedding <=> %s::vector < 0.65
                   AND LENGTH(review_text) >= 30
                   AND review_rating > 0
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
-            cursor.execute(query, (query_embedding, filter_by_asin, query_embedding, query_embedding, top_k))
+            cursor.execute(query, (query_embedding, filter_by_asin, query_embedding, top_k))
         else:
             query = """
                 SELECT
@@ -88,13 +87,12 @@ class PostgresVectorRetriever:
                     timestamp,
                     embedding <=> %s::vector AS distance
                 FROM reviews
-                WHERE embedding <=> %s::vector < 0.65
-                  AND LENGTH(review_text) >= 30
+                WHERE LENGTH(review_text) >= 30
                   AND review_rating > 0
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
-            cursor.execute(query, (query_embedding, query_embedding, query_embedding, top_k))
+            cursor.execute(query, (query_embedding, query_embedding, top_k))
 
         results = cursor.fetchall()
         cursor.close()
