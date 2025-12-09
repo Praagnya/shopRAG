@@ -49,7 +49,7 @@ class PostgresVectorRetriever:
         conn = psycopg2.connect(self.database_url)
         cursor = conn.cursor()
 
-        # Build query with optional ASIN filter
+        # Build query with optional ASIN filter and quality guardrails
         if filter_by_asin:
             query = """
                 SELECT
@@ -66,6 +66,7 @@ class PostgresVectorRetriever:
                     embedding <=> %s::vector AS distance
                 FROM reviews
                 WHERE asin = %s
+                  AND LENGTH(review_text) >= 30
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
@@ -85,12 +86,14 @@ class PostgresVectorRetriever:
                     timestamp,
                     embedding <=> %s::vector AS distance
                 FROM reviews
+                WHERE LENGTH(review_text) >= 30
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
             cursor.execute(query, (query_embedding, query_embedding, top_k))
 
         results = cursor.fetchall()
+        print(f"[Retriever] Query returned {len(results)} documents (requested {top_k})")
         cursor.close()
         conn.close()
 

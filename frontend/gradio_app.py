@@ -15,28 +15,22 @@ from backend.services.rag_pipeline import get_rag_pipeline
 
 # Load products at startup
 def load_products():
-    """Load product cache and return as list for dropdown."""
+    """Load product cache from JSON file."""
     cache_path = Path(__file__).parent.parent / "data" / "product_cache.json"
 
     if not cache_path.exists():
-        return {}, []
+        return {}
 
     with open(cache_path, 'r') as f:
         products = json.load(f)
 
-    # Create dropdown choices: "Product Name (ASIN)"
-    choices = []
-    for asin, product in products.items():
-        title = product['title'][:60] + "..." if len(product['title']) > 60 else product['title']
-        choices.append(f"{title} ({asin})")
-
-    return products, ["All Products"] + sorted(choices)
+    return products
 
 
 # Initialize RAG pipeline
 print("Loading RAG Pipeline...")
 rag_pipeline = get_rag_pipeline()
-products_cache, product_choices = load_products()
+products_cache = load_products()
 print(f"✓ Loaded {len(products_cache)} products")
 
 
@@ -264,10 +258,15 @@ with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
                 label="Click to try:"
             )
         with gr.Column():
-            # Show some example ASINs
-            example_asins = list(products_cache.keys())[:5]
-            example_list = "\n".join([f"- `{asin}`: {products_cache[asin]['title'][:50]}..." for asin in example_asins])
-            gr.Markdown(f"### 📦 Example Product ASINs:\n{example_list}\n\n*Leave ASIN blank to search all products*")
+            # Show example ASINs (verified to have reviews in database)
+            example_asins = ['B07SKQZSN6', 'B0C14LLH14', 'B077ZNJ6XX', 'B0C26XD5J2', 'B0C147N71M']
+            example_list = []
+            for asin in example_asins:
+                if asin in products_cache:
+                    title = products_cache[asin]['title'][:50]
+                    reviews = products_cache[asin].get('rating_number', 0)
+                    example_list.append(f"- `{asin}`: {title}... ({reviews:,} reviews)")
+            gr.Markdown(f"### 📦 Example Product ASINs:\n" + "\n".join(example_list) + "\n\n*Leave ASIN blank to search all products*")
 
     # Event handlers
     submit_btn.click(

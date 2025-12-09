@@ -140,9 +140,24 @@ class RAGPipeline:
             documents = retrieval_results["documents"]
             print(f"[RAG] Retrieved {len(documents)} documents")
 
-            # Step 3 — Product metadata
-            print("[RAG] Step 3: Loading metadata...")
-            metadata_timer = Timer()
+        if documents:
+            print(f"[RAG] First document distance: {documents[0].get('distance', 'N/A')}")
+            print(f"[RAG] First document ASIN: {documents[0].get('metadata', {}).get('asin', 'N/A')}")
+            print(f"[RAG] First document text length: {len(documents[0].get('text', ''))} chars")
+
+        # Check if no documents were retrieved
+        if len(documents) == 0:
+            print("[RAG] WARNING: No documents retrieved. Query may not match any reviews or guardrails filtered all results.")
+            return {
+                'query': user_query,
+                'response': "I couldn't find any relevant customer reviews that match your question. This could mean:\n- No reviews discuss this specific aspect\n- The product may not have enough reviews in our database\n- Try rephrasing your question or searching all products (leave ASIN blank)",
+                'product_metadata': {},
+                'retrieved_documents': [],
+                'num_documents_used': 0
+            }
+
+        # Step 3: Get product metadata
+        print("[RAG] Step 3: Loading product metadata...")
 
             if product_asin:
                 primary_asin = product_asin
