@@ -1,8 +1,39 @@
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer  # existing
 from typing import List, Union
 import numpy as np
+import os  # ADDED
 from backend.config.settings import EMBEDDING_MODEL_NAME
 
+
+# --------------------------------------------------------------
+# ADDED FOR VERSION A MOCK MODE (lightweight dummy embeddings)
+# --------------------------------------------------------------
+
+class MockEmbeddingService:
+    """
+    Lightweight mock embedder used in Version A.
+    Does NOT load any transformer model.
+    """
+
+    def __init__(self):
+        print("⚠ Using MOCK EmbeddingService (Version A). No real embeddings generated.")
+        self.dim = 384  # safe small dimension
+
+    def embed_text(self, text: str) -> List[float]:
+        """Return a fixed dummy vector."""
+        return [0.01] * self.dim
+
+    def embed_batch(self, texts: List[str], batch_size: int = 32, show_progress: bool = False) -> List[List[float]]:
+        """Return a batch of dummy vectors."""
+        return [[0.01] * self.dim for _ in texts]
+
+    def get_embedding_dimension(self) -> int:
+        return self.dim
+
+
+# --------------------------------------------------------------
+# ORIGINAL EMBEDDING SERVICE (unchanged)
+# --------------------------------------------------------------
 
 class EmbeddingService:
     """Service for generating embeddings using sentence transformers."""
@@ -58,17 +89,30 @@ class EmbeddingService:
         return self.model.get_sentence_embedding_dimension()
 
 
-# Singleton instance
+# --------------------------------------------------------------
+# SINGLETON FACTORY — CHOOSES MOCK OR REAL EMBEDDER
+# --------------------------------------------------------------
+
 _embedder_instance = None
 
 
-def get_embedder() -> EmbeddingService:
-    """Get or create the singleton embedder instance.
+def get_embedder():
+    """
+    Get or create the embedder.
 
-    Returns:
-        EmbeddingService instance
+    VERSION A → Uses mock embedder if RAG_MODE=MOCK
+    VERSION B → Uses full SentenceTransformer embedder
     """
     global _embedder_instance
+
     if _embedder_instance is None:
-        _embedder_instance = EmbeddingService()
+
+        rag_mode = os.getenv("RAG_MODE", "FULL").upper()
+
+        if rag_mode == "MOCK":
+            print("🔧 RAG_MODE=MOCK → Using MockEmbeddingService")
+            _embedder_instance = MockEmbeddingService()
+        else:
+            _embedder_instance = EmbeddingService()
+
     return _embedder_instance

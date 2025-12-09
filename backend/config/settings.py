@@ -20,15 +20,14 @@ OPENAI_MODEL = "gpt-5-mini"  # or "gpt-4"
 
 # Embedding Configuration
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
-# Alternative: "sentence-transformers/all-MiniLM-L6-v2"
 
 # ChromaDB Configuration
 COLLECTION_NAME = "amazon_reviews"
 
 # RAG Configuration
-TOP_K_RESULTS = 5  # Number of chunks to retrieve
-CHUNK_SIZE = 512  # Tokens per chunk
-CHUNK_OVERLAP = 50  # Token overlap between chunks
+TOP_K_RESULTS = 5
+CHUNK_SIZE = 512
+CHUNK_OVERLAP = 50
 
 # API Configuration
 API_HOST = "0.0.0.0"
@@ -41,13 +40,23 @@ SUBSET_REVIEWS = "raw_review_Cell_Phones_and_Accessories"
 SUBSET_META = "raw_meta_Cell_Phones_and_Accessories"
 
 # Ingestion limits
-MAX_PRODUCTS_TO_LOAD = 50000  # Load 50k most recent products (will add 30k new)
-MAX_REVIEWS_PER_PRODUCT = 100  # 100 reviews per product
-MAX_REVIEWS_TO_PROCESS = None  # Process all reviews for selected products
+MAX_PRODUCTS_TO_LOAD = 50000
+MAX_REVIEWS_PER_PRODUCT = 100
+MAX_REVIEWS_TO_PROCESS = None
 
 # Ingestion Performance
-BATCH_SIZE = 512  # Embedding batch size (increase for better throughput)
-SAVE_CHECKPOINT_EVERY = 1000  # Save checkpoint every N reviews
+BATCH_SIZE = 512
+SAVE_CHECKPOINT_EVERY = 1000
 
 # Logging
 LOG_LEVEL = "INFO"
+
+# -----------------------
+# NEW — RAG Runtime Modes
+# -----------------------
+
+# Version A vs Version B
+RAG_MODE = os.getenv("RAG_MODE", "FULL").upper()
+
+# Retriever selection
+RETRIEVER_MODE = os.getenv("RETRIEVER_MODE", "postgres").lower()
