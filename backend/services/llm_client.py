@@ -104,10 +104,10 @@ CRITICAL RULES:
 2. DO NOT make assumptions or add information not in the reviews
 3. DO NOT invent product features, specifications, or customer opinions
 4. If the reviews do not contain information to answer the question, clearly state: "The available reviews do not mention this aspect"
-5. When mentioning customer opinions, indicate how many reviews mention it
-6. Quote or paraphrase actual review content - do not generalize beyond what is stated
+5. Summarize customer opinions briefly - avoid quoting every review
+6. Keep responses short (2-3 sentences maximum)
 
-Be concise, helpful, and specific. Stay grounded in the actual review text."""
+Be brief, helpful, and direct. Stay grounded in the actual review text."""
 
         user_prompt = f"""{context}
 
