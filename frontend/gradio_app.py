@@ -299,8 +299,8 @@ with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
                 label="Click to try:"
             )
         with gr.Column():
-            # Show example ASINs with 100 reviews in database (actual phones)
-            example_asins = ['B005YTVZR4', 'B00E9W9D4E', 'B01J88GV0C', 'B06XWNR8DB', 'B00KB7O49K']
+            # Show example ASINs with most reviews (verified in database)
+            example_asins = ['B07SKQZSN6', 'B007Y4HDL4', 'B003ELOOZO', 'B006F88Y6S', 'B007I4GHFI']
             example_list = []
             for asin in example_asins:
                 if asin in products_cache:
@@ -308,8 +308,7 @@ with gr.Blocks(title="shopRAG - Product Review Chatbot") as demo:
                     reviews = products_cache[asin].get('rating_number', 0)
                     example_list.append(f"- `{asin}`: {title}... ({reviews:,} reviews)")
                 else:
-                    # ASIN not in local cache but exists in database
-                    example_list.append(f"- `{asin}` (100 reviews in database)")
+                    example_list.append(f"- `{asin}` (in database)")
             gr.Markdown(f"### 📦 Example Product ASINs:\n" + "\n".join(example_list) + "\n\n*Leave ASIN blank to search all products*")
 
     # Event handlers
