@@ -49,22 +49,6 @@ class PostgresVectorRetriever:
         conn = psycopg2.connect(self.database_url)
         cursor = conn.cursor()
 
-        # Debug: Check how many reviews exist for this ASIN
-        if filter_by_asin:
-            # Count total reviews for this ASIN
-            cursor.execute("SELECT COUNT(*) FROM reviews WHERE asin = %s", (filter_by_asin,))
-            total_for_asin = cursor.fetchone()[0]
-            
-            # Count reviews meeting filter criteria
-            cursor.execute("""
-                SELECT COUNT(*) FROM reviews 
-                WHERE asin = %s AND LENGTH(review_text) >= 30
-            """, (filter_by_asin,))
-            matching_count = cursor.fetchone()[0]
-            
-            print(f"[Retriever] ASIN {filter_by_asin}: {total_for_asin} total reviews, {matching_count} meet filter criteria (length >= 30)")
-            print(f"[Retriever] Requesting top_k: {top_k}")
-
         # Build query with optional ASIN filter and quality guardrails
         if filter_by_asin:
             query = """
