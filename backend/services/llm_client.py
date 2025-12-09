@@ -116,21 +116,35 @@ Question: {query}
 Answer based on the product information and customer reviews above:"""
 
         # Call OpenAI API
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_completion_tokens=500
-        )
+        print(f"[LLM] Calling OpenAI API with model: {self.model}")
+        print(f"[LLM] Context length: {len(context)} chars")
+        print(f"[LLM] Number of reviews in context: {len(context_documents)}")
 
-        response_text = response.choices[0].message.content
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_completion_tokens=500
+            )
 
-        # Check for hallucination (logs warnings but doesn't block)
-        self._check_hallucination(response_text, context_documents)
+            response_text = response.choices[0].message.content
+            print(f"[LLM] Response received. Length: {len(response_text) if response_text else 0} chars")
 
-        return response_text
+            if not response_text:
+                print("[LLM] WARNING: OpenAI returned None or empty response")
+                response_text = "I apologize, but I couldn't generate a response. Please try again."
+
+            # Check for hallucination (logs warnings but doesn't block)
+            self._check_hallucination(response_text, context_documents)
+
+            return response_text
+
+        except Exception as e:
+            print(f"[LLM] ERROR calling OpenAI API: {type(e).__name__}: {e}")
+            raise
 
     def _build_context(self, product_metadata: Dict[str, Any], documents: List[Dict[str, Any]]) -> str:
         """Build context string from product metadata and retrieved documents.

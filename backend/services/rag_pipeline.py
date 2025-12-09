@@ -67,6 +67,11 @@ class RAGPipeline:
         documents = retrieval_results['documents']
         print(f"[RAG] Retrieved {len(documents)} documents")
 
+        if documents:
+            print(f"[RAG] First document distance: {documents[0].get('distance', 'N/A')}")
+            print(f"[RAG] First document ASIN: {documents[0].get('metadata', {}).get('asin', 'N/A')}")
+            print(f"[RAG] First document text length: {len(documents[0].get('text', ''))} chars")
+
         # Check if no documents were retrieved
         if len(documents) == 0:
             print("[RAG] WARNING: No documents retrieved. Query may not match any reviews or guardrails filtered all results.")
