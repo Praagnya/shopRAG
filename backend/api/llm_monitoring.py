@@ -91,7 +91,7 @@ def monitor_llm_call(model: str, prompt: str, fn):
     if error:
         raise Exception(f"LLM Error: {error}")
 
-    return response, info
+    return response
 
 
 # ===============================================================
