@@ -67,7 +67,6 @@ class PostgresVectorRetriever:
                 FROM reviews
                 WHERE asin = %s
                   AND LENGTH(review_text) >= 30
-                  AND review_rating > 0
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
@@ -88,7 +87,6 @@ class PostgresVectorRetriever:
                     embedding <=> %s::vector AS distance
                 FROM reviews
                 WHERE LENGTH(review_text) >= 30
-                  AND review_rating > 0
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
             """
