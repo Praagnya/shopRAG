@@ -13,24 +13,59 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.services.rag_pipeline import get_rag_pipeline
 
 
-# Load products at startup
+# Load products at startup from PostgreSQL
 def load_products():
-    """Load product cache and return as list for dropdown."""
-    cache_path = Path(__file__).parent.parent / "data" / "product_cache.json"
+    """Load product metadata from PostgreSQL database."""
+    import psycopg2
+    import os
+    from dotenv import load_dotenv
 
-    if not cache_path.exists():
-        return {}, []
+    load_dotenv()
+    DATABASE_URL = os.getenv('DATABASE_URL')
 
-    with open(cache_path, 'r') as f:
-        products = json.load(f)
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor()
 
-    # Create dropdown choices: "Product Name (ASIN)"
-    choices = []
-    for asin, product in products.items():
-        title = product['title'][:60] + "..." if len(product['title']) > 60 else product['title']
-        choices.append(f"{title} ({asin})")
+        # Load all products from database
+        cursor.execute('''
+            SELECT asin, title, main_category, average_rating,
+                   rating_number, price, features, description
+            FROM products
+        ''')
 
-    return products, ["All Products"] + sorted(choices)
+        products = {}
+        for row in cursor.fetchall():
+            asin = row[0]
+            products[asin] = {
+                'title': row[1],
+                'main_category': row[2],
+                'average_rating': row[3],
+                'rating_number': row[4],
+                'price': row[5],
+                'features': json.loads(row[6]) if row[6] else [],
+                'description': row[7]
+            }
+
+        cursor.close()
+        conn.close()
+
+        print(f"Loaded {len(products)} products from PostgreSQL")
+        return products, []
+
+    except Exception as e:
+        print(f"Error loading products from PostgreSQL: {e}")
+        print("Falling back to JSON file...")
+
+        # Fallback to JSON file
+        cache_path = Path(__file__).parent.parent / "data" / "product_cache.json"
+        if not cache_path.exists():
+            return {}, []
+
+        with open(cache_path, 'r') as f:
+            products = json.load(f)
+
+        return products, []
 
 
 # Initialize RAG pipeline
