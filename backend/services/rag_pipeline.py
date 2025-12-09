@@ -1,14 +1,12 @@
 import os
 import json
 from typing import Dict, Any, Optional
-from pathlib import Path
 
 from backend.services.embedder import get_embedder
 from backend.services.metrics import metrics, Timer
 from backend.services.llm_client import get_llm_client
 from backend.services.guardrails import get_guardrails
 from backend.config.settings import DATA_DIR, RETRIEVER_MODE
-
 from backend.services.prom_metrics import (
     rag_queries_total,
     rag_llm_calls_total,
@@ -25,29 +23,41 @@ from backend.services.prom_metrics import (
 
 class RAGPipeline:
     """
-    Unified RAG Pipeline supporting Version A (MOCK) and Version B (FULL).
+    Unified RAG Pipeline supporting:
+    - Version A (MOCK mode): simple lightweight RAG for small retailers
+    - Version B (FULL mode): full RAG with embeddings + vector DB + product cache
+
+    The mode is selected using environment variable:
+        RAG_MODE = "MOCK"   -> Version A
+        RAG_MODE = "FULL"   -> Version B (default)
     """
 
     def __init__(self):
+        # Determine which mode to use
         self.mode = os.getenv("RAG_MODE", "FULL").upper().strip()
         print(f"Initializing RAG Pipeline in mode: {self.mode}")
 
+        # Always available
         self.guardrails = get_guardrails()
         self.llm_client = get_llm_client()
 
+        # Mode-specific initialization
         if self.mode == "MOCK":
-            self._init_mock_mode()
+            self._init_mock_mode()   # Version A
         else:
-            self._init_full_mode()
+            self._init_full_mode()   # Version B
 
     # ----------------------------------------------------------------------
-    # FULL MODE (Version B)
+    # FULL MODE (Version B) — production pipeline with DB + embeddings
     # ----------------------------------------------------------------------
     def _init_full_mode(self):
+        """Initialize real production-grade RAG (embeddings + vector DB)."""
         print("Loading FULL RAG Pipeline (Version B)...")
 
         cache_filepath = DATA_DIR / "product_cache.json"
-        self.product_cache = {}
+
+        # Always define product_cache
+        self.product_cache: Dict[str, Any] = {}
 
         if cache_filepath.exists():
             with open(cache_filepath, "r") as f:
@@ -55,20 +65,22 @@ class RAGPipeline:
             print(f"Loaded product cache with {len(self.product_cache)} products")
             rag_products_loaded.set(len(self.product_cache))
         else:
-            print(f" Warning: Product cache missing at {cache_filepath}")
+            print(f" Warning: Product cache missing at {cache_filepath}.")
             print("   Continuing with EMPTY product cache")
 
+        # Initialize embedder
         self.embedder = get_embedder()
 
+        # Choose retriever backend
         print(f"Retriever mode selected: {RETRIEVER_MODE}")
         if RETRIEVER_MODE == "postgres":
             from backend.services.retriever_postgres import get_postgres_retriever
             self.retriever = get_postgres_retriever()
-            print("🔗 Using PostgreSQL retriever (Production).")
+            print("🔗 Using PostgreSQL retriever (Production, Version B).")
         elif RETRIEVER_MODE == "chroma":
             from backend.services.retriever import VectorRetriever
             self.retriever = VectorRetriever()
-            print("🔗 Using ChromaDB retriever.")
+            print("🔗 Using ChromaDB retriever (Legacy teammate version).")
         else:
             raise ValueError(f"Invalid RETRIEVER_MODE: {RETRIEVER_MODE}")
 
@@ -78,9 +90,13 @@ class RAGPipeline:
     # MOCK MODE (Version A)
     # ----------------------------------------------------------------------
     def _init_mock_mode(self):
+        """Initialize a lightweight no-DB, no-embedding mock pipeline."""
         print("Loading MOCK RAG Pipeline (Version A)...")
 
-        self.product_cache = {}
+        # No DB, no ingestion, no cache needed
+        self.product_cache: Dict[str, Any] = {}
+
+        # Disable real services
         self.embedder = None
         self.retriever = None
 
@@ -89,33 +105,55 @@ class RAGPipeline:
     # ----------------------------------------------------------------------
     # PUBLIC QUERY ROUTER
     # ----------------------------------------------------------------------
-    def query(self, user_query: str, top_k: int = 5, product_asin: Optional[str] = None):
+    def query(
+        self,
+        user_query: str,
+        top_k: int = 5,
+        product_asin: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Route query to MOCK or FULL implementation.
+
+        This level only handles the *core counter* for total queries.
+        More detailed timing and Prometheus metrics are inside the
+        specific implementations.
+        """
+        # App-level metrics
         metrics.increment_query()
         rag_queries_total.inc()
 
         if self.mode == "MOCK":
             return self._query_mock(user_query, top_k, product_asin)
+
         return self._query_full(user_query, top_k, product_asin)
 
     # ----------------------------------------------------------------------
-    # FULL PIPELINE EXECUTION (Version B)
+    # FULL PIPELINE EXECUTION (Version B) — teammate logic + metrics
     # ----------------------------------------------------------------------
-    def _query_full(self, user_query: str, top_k: int, product_asin: Optional[str]):
+    def _query_full(
+        self,
+        user_query: str,
+        top_k: int,
+        product_asin: Optional[str],
+    ) -> Dict[str, Any]:
+        """Run the full real RAG workflow (embeddings + retriever + cache)."""
 
         pipeline_timer = Timer()
         rag_active_requests.inc()
 
         try:
             print(f"\n[RAG] Processing query: {user_query}")
+            if product_asin:
+                print(f"[RAG] Filtering to product ASIN: {product_asin}")
 
-            # Step 0 — Guardrails
-            print("[RAG] Step 0: Guardrail validation...")
+            # Step 0: Guardrails
+            print("[RAG] Step 0: Validating query with guardrails...")
             is_valid, error_msg = self.guardrails.validate_query(user_query)
             if not is_valid:
                 rag_guardrail_failures.inc()
                 raise ValueError(f"Invalid query: {error_msg}")
 
-            # Step 1 — Embedding
+            # Step 1: Embedding (teammate behavior preserved)
             print("[RAG] Step 1: Embedding query...")
             embed_timer = Timer()
             query_embedding = self.embedder.embed_text(user_query)
@@ -123,16 +161,14 @@ class RAGPipeline:
             rag_embedding_latency.observe(embed_timer.elapsed_ms)
             metrics.record_embedding_time(embed_timer.elapsed_ms)
 
-            # Step 2 — Retrieval
-            print("[RAG] Step 2: Retrieving documents...")
+            # Step 2: Retrieval (teammate behavior preserved)
+            print(f"[RAG] Step 2: Retrieving top {top_k} documents...")
             retrieval_timer = Timer()
-
             retrieval_results = self.retriever.retrieve(
                 query_embedding,
                 top_k=top_k,
                 filter_by_asin=product_asin,
             )
-
             retrieval_timer.stop()
             rag_retrieval_latency.observe(retrieval_timer.elapsed_ms)
             metrics.record_retrieval_time(retrieval_timer.elapsed_ms)
@@ -140,81 +176,83 @@ class RAGPipeline:
             documents = retrieval_results["documents"]
             print(f"[RAG] Retrieved {len(documents)} documents")
 
-        if documents:
-            print(f"[RAG] First document distance: {documents[0].get('distance', 'N/A')}")
-            print(f"[RAG] First document ASIN: {documents[0].get('metadata', {}).get('asin', 'N/A')}")
-            print(f"[RAG] First document text length: {len(documents[0].get('text', ''))} chars")
+            # Step 3: Product metadata (teammate behavior preserved)
+            print("[RAG] Step 3: Loading product metadata...")
+            metadata_timer = Timer()
 
-        # Check if no documents were retrieved
-        if len(documents) == 0:
-            print("[RAG] WARNING: No documents retrieved. Query may not match any reviews or guardrails filtered all results.")
-            return {
-                'query': user_query,
-                'response': "I couldn't find any relevant customer reviews that match your question. This could mean:\n- No reviews discuss this specific aspect\n- The product may not have enough reviews in our database\n- Try rephrasing your question or searching all products (leave ASIN blank)",
-                'product_metadata': {},
-                'retrieved_documents': [],
-                'num_documents_used': 0
-            }
-
-        # Step 3: Get product metadata
-        print("[RAG] Step 3: Loading product metadata...")
-
+            # Determine which ASIN to use
             if product_asin:
                 primary_asin = product_asin
             else:
-                asins = {doc["metadata"].get("asin") for doc in documents}
-                primary_asin = next(iter(asins), None)
+                asins = {
+                    doc["metadata"].get("asin")
+                    for doc in documents
+                    if doc.get("metadata", {}).get("asin")
+                }
+                primary_asin = list(asins)[0] if asins else None
+
+            product_metadata: Dict[str, Any] = {}
 
             if primary_asin and primary_asin in self.product_cache:
                 product_metadata = self.product_cache[primary_asin]
             else:
-                # fallback construction
+                # Fallback: reconstruct from review metadata (original teammate logic)
                 if documents:
-                    m = documents[0]["metadata"]
+                    first_doc_meta = documents[0]["metadata"]
                     product_metadata = {
-                        "title": m.get("product_name", "Unknown Product"),
-                        "main_category": m.get("category", ""),
-                        "average_rating": m.get("product_avg_rating", 0),
+                        "title": first_doc_meta.get("product_name", "Unknown Product"),
+                        "main_category": first_doc_meta.get("category", ""),
+                        "average_rating": first_doc_meta.get("product_avg_rating", 0),
                         "rating_number": 0,
                         "price": "N/A",
                         "features": [],
                         "description": "",
                     }
-                else:
-                    product_metadata = {}
+                elif primary_asin:
+                    product_metadata = {
+                        "title": f"Product {primary_asin}",
+                        "main_category": "Unknown",
+                        "average_rating": 0,
+                        "rating_number": 0,
+                        "price": "N/A",
+                        "features": [],
+                        "description": "No reviews available for this product.",
+                    }
 
             metadata_timer.stop()
             metrics.record_metadata_time(metadata_timer.elapsed_ms)
 
-            # Step 4 — LLM call
-            print("[RAG] Step 4: Calling LLM...")
+            # Step 4: LLM call (teammate behavior preserved)
+            print("[RAG] Step 4: Generating response with LLM...")
             rag_llm_calls_total.inc()
             llm_timer = Timer()
 
-            response = self.llm_client.generate_response(
-                user_query, product_metadata, documents
+            response_text = self.llm_client.generate_response(
+                user_query,
+                product_metadata,
+                documents,
             )
 
             llm_timer.stop()
             rag_llm_latency.observe(llm_timer.elapsed_ms)
             metrics.record_llm_time(llm_timer.elapsed_ms)
 
-            # Pipeline complete
+            # Pipeline completion
             pipeline_timer.stop()
             rag_pipeline_latency.observe(pipeline_timer.elapsed_ms)
             metrics.record_pipeline_time(pipeline_timer.elapsed_ms)
 
             return {
                 "query": user_query,
-                "response": response,
+                "response": response_text,
                 "product_metadata": product_metadata,
                 "retrieved_documents": documents,
                 "num_documents_used": len(documents),
             }
 
-        except Exception as e:
+        except Exception:
             rag_errors_total.inc()
-            raise e
+            raise
 
         finally:
             rag_active_requests.dec()
@@ -222,31 +260,46 @@ class RAGPipeline:
     # ----------------------------------------------------------------------
     # MOCK PIPELINE EXECUTION (Version A)
     # ----------------------------------------------------------------------
-    def _query_mock(self, user_query: str, top_k: int, product_asin: Optional[str]):
+    def _query_mock(
+        self,
+        user_query: str,
+        top_k: int,
+        product_asin: Optional[str],
+    ) -> Dict[str, Any]:
+        """Mocked RAG pipeline (no embeddings, no DB, no cache)."""
 
         pipeline_timer = Timer()
 
         print(f"\n[MOCK RAG] Processing query: {user_query}")
 
+        # Guardrails still apply
         is_valid, error_msg = self.guardrails.validate_query(user_query)
         if not is_valid:
             metrics.increment_guardrail_failure()
             raise ValueError(f"Invalid query: {error_msg}")
 
+        print("[MOCK RAG] Using dummy reviews & metadata...")
+
         mock_documents = [
             {
                 "text": "This is a mock review describing product quality and durability.",
-                "metadata": {"asin": product_asin or "MOCK-ASIN", "review_rating": 5},
+                "metadata": {
+                    "asin": product_asin or "MOCK-ASIN",
+                    "review_rating": 5,
+                },
                 "distance": 0.1,
             },
             {
                 "text": "Customers appreciated the battery life and price point.",
-                "metadata": {"asin": product_asin or "MOCK-ASIN", "review_rating": 4},
+                "metadata": {
+                    "asin": product_asin or "MOCK-ASIN",
+                    "review_rating": 4,
+                },
                 "distance": 0.2,
             },
         ][:top_k]
 
-        mock_metadata = {
+        mock_product_metadata = {
             "title": "Mock Product - Version A",
             "main_category": "Cell Phones & Accessories",
             "average_rating": 4.5,
@@ -256,8 +309,10 @@ class RAGPipeline:
             "description": "This is a mock product used for monitoring demo.",
         }
 
-        response = self.llm_client.generate_response(
-            user_query, mock_metadata, mock_documents
+        response_text = self.llm_client.generate_response(
+            user_query,
+            mock_product_metadata,
+            mock_documents,
         )
 
         pipeline_timer.stop()
@@ -265,8 +320,8 @@ class RAGPipeline:
 
         return {
             "query": user_query,
-            "response": response,
-            "product_metadata": mock_metadata,
+            "response": response_text,
+            "product_metadata": mock_product_metadata,
             "retrieved_documents": mock_documents,
             "num_documents_used": len(mock_documents),
         }
@@ -274,28 +329,35 @@ class RAGPipeline:
     # ----------------------------------------------------------------------
     # STATUS ENDPOINT
     # ----------------------------------------------------------------------
-    def get_pipeline_status(self):
+    def get_pipeline_status(self) -> Dict[str, Any]:
+        """Unified status API for Version A and B."""
+
         if self.mode == "FULL":
-            stats = self.retriever.get_collection_stats()
-            embed_dim = self.embedder.get_embedding_dimension()
+            collection_stats = self.retriever.get_collection_stats()
+            embedding_dim = self.embedder.get_embedding_dimension()
             num_products = len(self.product_cache)
         else:
-            stats = {"count": 0, "index_type": "mock", "details": "No vector DB in MOCK mode"}
-            embed_dim = 0
+            collection_stats = {
+                "count": 0,
+                "index_type": "mock",
+                "details": "No vector DB in MOCK mode.",
+            }
+            embedding_dim = 0
             num_products = 0
 
         return {
             "status": "ready",
             "mode": self.mode,
             "num_products": num_products,
-            "embedding_dimension": embed_dim,
-            "vector_db": stats,
+            "embedding_dimension": embedding_dim,
+            "vector_db": collection_stats,
             "llm_model": self.llm_client.model,
         }
 
 
-# Singleton
-_rag_pipeline_instance = None
+# Singleton accessor — do not modify
+_rag_pipeline_instance: Optional[RAGPipeline] = None
+
 
 def get_rag_pipeline() -> RAGPipeline:
     global _rag_pipeline_instance
