@@ -3,6 +3,13 @@ import json
 import logging
 import os
 from typing import Any, Dict
+from backend.services.prom_metrics import (
+    llm_prompt_chars_total,
+    llm_response_chars_total,
+    llm_latency_ms,
+    llm_tokens_used_total,
+    llm_errors_total
+)
 
 # Ensure logs directory exists
 LOG_DIR = "logs"
@@ -23,76 +30,29 @@ def log_llm_event(event: Dict[str, Any]):
     """Write a monitoring event to JSON logs."""
     logger.info(json.dumps(event))
 
+def monitor_llm_call(model, prompt, fn):
 
-def monitor_llm_call(model: str, prompt: str, fn):
-    """
-    Wraps an LLM call and returns BOTH:
-      (response, metrics_dict)
-
-    metrics_dict contains:
-      - prompt_tokens
-      - completion_tokens
-      - total_tokens
-      - latency_ms
-      - error
-      - prompt_chars
-      - response_chars
-    """
     start = time.time()
-    error = None
-    response_text = ""
-    usage = {
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_tokens": 0,
-    }
-
     try:
-        # Actual OpenAI call
         response = fn()
+        elapsed = (time.time() - start) * 1000
 
-        response_text = response.choices[0].message.content
+        # Extract token & char data
+        usage = response.usage
+        prompt_chars = len(prompt)
+        response_chars = len(response.choices[0].message.content)
 
-        if hasattr(response, "usage"):
-            usage["prompt_tokens"] = getattr(response.usage, "prompt_tokens", 0)
-            usage["completion_tokens"] = getattr(response.usage, "completion_tokens", 0)
-            usage["total_tokens"] = getattr(response.usage, "total_tokens", 0)
+        llm_prompt_chars_total.inc(prompt_chars)
+        llm_response_chars_total.inc(response_chars)
+        llm_tokens_used_total.inc(usage.total_tokens)
+        llm_latency_ms.observe(elapsed)
 
-    except Exception as e:
-        error = str(e)
-        response = None
+        response.llm_latency_ms = elapsed
+        return response
 
-    latency_ms = round((time.time() - start) * 1000, 2)
-
-    # JSON LOG EVENT
-    event = {
-        "timestamp": time.time(),
-        "model": model,
-        "prompt_chars": len(prompt),
-        "response_chars": len(response_text),
-        "latency_ms": latency_ms,
-        "prompt_tokens": usage["prompt_tokens"],
-        "completion_tokens": usage["completion_tokens"],
-        "total_tokens": usage["total_tokens"],
-        "error": error,
-    }
-
-    log_llm_event(event)
-
-    # Return detailed info to LLMClient so it can update Prometheus
-    info = {
-        "prompt_tokens": usage["prompt_tokens"],
-        "completion_tokens": usage["completion_tokens"],
-        "total_tokens": usage["total_tokens"],
-        "latency_ms": latency_ms,
-        "error": error,
-    }
-
-    if error:
-        raise Exception(f"LLM Error: {error}")
-
-    return response
-
+    except Exception:
+        llm_errors_total.inc()
+        raise
 
 # ===============================================================
 # Prometheus Metrics for Version B (Full RAG)

@@ -1,4 +1,5 @@
 from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Histogram, Gauge
 
 # ------------------------
 # Counters
@@ -58,5 +59,26 @@ rag_active_requests = Gauge(
 rag_products_loaded = Gauge(
     "rag_products_loaded_total",
     "Number of products loaded into pipeline (Version B only)"
+)
+
+llm_prompt_chars_total = Counter(
+    "llm_prompt_chars_total", "Total prompt characters sent to LLM"
+)
+
+llm_response_chars_total = Counter(
+    "llm_response_chars_total", "Total response characters returned by LLM"
+)
+
+llm_latency_ms = Histogram(
+    "llm_latency_ms", "Latency of LLM responses in milliseconds",
+    buckets=[50, 100, 200, 400, 800, 1500, 3000, 6000, 10000]
+)
+
+llm_tokens_used_total = Counter(
+    "llm_tokens_used_total", "Total tokens used (prompt + completion)"
+)
+
+llm_errors_total = Counter(
+    "llm_errors_total", "Number of LLM errors"
 )
 
