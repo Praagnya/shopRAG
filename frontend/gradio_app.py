@@ -13,65 +13,24 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.services.rag_pipeline import get_rag_pipeline
 
 
-# Load products at startup from PostgreSQL
+# Load products at startup
 def load_products():
-    """Load product metadata from PostgreSQL database."""
-    import psycopg2
-    import os
-    from dotenv import load_dotenv
+    """Load product cache from JSON file."""
+    cache_path = Path(__file__).parent.parent / "data" / "product_cache.json"
 
-    load_dotenv()
-    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not cache_path.exists():
+        return {}
 
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cursor = conn.cursor()
+    with open(cache_path, 'r') as f:
+        products = json.load(f)
 
-        # Load all products from database
-        cursor.execute('''
-            SELECT asin, title, main_category, average_rating,
-                   rating_number, price, features, description
-            FROM products
-        ''')
-
-        products = {}
-        for row in cursor.fetchall():
-            asin = row[0]
-            products[asin] = {
-                'title': row[1],
-                'main_category': row[2],
-                'average_rating': row[3],
-                'rating_number': row[4],
-                'price': row[5],
-                'features': json.loads(row[6]) if row[6] else [],
-                'description': row[7]
-            }
-
-        cursor.close()
-        conn.close()
-
-        print(f"Loaded {len(products)} products from PostgreSQL")
-        return products, []
-
-    except Exception as e:
-        print(f"Error loading products from PostgreSQL: {e}")
-        print("Falling back to JSON file...")
-
-        # Fallback to JSON file
-        cache_path = Path(__file__).parent.parent / "data" / "product_cache.json"
-        if not cache_path.exists():
-            return {}, []
-
-        with open(cache_path, 'r') as f:
-            products = json.load(f)
-
-        return products, []
+    return products
 
 
 # Initialize RAG pipeline
 print("Loading RAG Pipeline...")
 rag_pipeline = get_rag_pipeline()
-products_cache, product_choices = load_products()
+products_cache = load_products()
 print(f"✓ Loaded {len(products_cache)} products")
 
 
