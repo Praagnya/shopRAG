@@ -4,7 +4,7 @@ import re
 from backend.config.settings import OPENAI_API_KEY, OPENAI_MODEL
 
 # LLM Monitoring Wrapper
-from backend.api.llm_monitoring import monitor_llm_call, record_llm_metrics
+from backend.api.llm_monitoring import monitor_llm_call
 
 
 class LLMClient:
@@ -146,13 +146,6 @@ Answer based ONLY on the product information and customer reviews above:
             if not response_text:
                 print("[LLM] WARNING: OpenAI returned None or empty response")
                 response_text = "I apologize, but I couldn't generate a response. Please try again."
-
-            # Record token + cost metrics (Prometheus)
-            record_llm_metrics(
-                prompt_tokens=response.usage.prompt_tokens or 0,
-                completion_tokens=response.usage.completion_tokens or 0,
-                latency_ms=response.llm_latency_ms if hasattr(response, "llm_latency_ms") else 0
-            )
 
             # Check hallucination grounding (teammate logic unchanged)
             self._check_hallucination(response_text, context_documents)
