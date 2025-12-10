@@ -1,4 +1,7 @@
-# MIS 547 – Group 4 shopRAG: Retail RAG Chatbot Project
+# shopRAG: AI-Powered Product Review Chatbot
+
+**MIS 547 – Group 4**
+University of Arizona
 
 ## Team Members
 
@@ -10,286 +13,649 @@
 
 ---
 
-## Getting Started
+## Project Overview
 
-### Prerequisites
+ShopRAG is an AI-powered chatbot that helps customers make informed purchasing decisions by answering questions about products based on real customer reviews. Using Retrieval-Augmented Generation (RAG), the system provides accurate, grounded responses without hallucinating information.
 
-**Option 1: Using uv (Recommended)**
+### Key Features
 
-- [uv](https://github.com/astral-sh/uv) package manager
-- Python 3.10+ will be automatically installed by uv if not present
+✅ **Real-time Q&A** - Answer product questions instantly using customer reviews
+✅ **Semantic Search** - Find relevant reviews using vector embeddings
+✅ **Guardrails** - Input validation, PII removal, and hallucination detection
+✅ **Scalable** - PostgreSQL + pgvector for production-grade vector search
+✅ **Interactive UI** - Gradio-based chat interface with product filtering
 
-**Option 2: Using pip**
+---
 
-- Python 3.10 or higher must be manually installed
-- pip (usually comes with Python)
+## Live Demo
 
-### Installation
+**Deployed on Digital Ocean**
 
-1. Clone the repository:
+- **UI**: Gradio Share Link (generated on startup)
+- **Database**: 30,000 products with 191,849 reviews
+- **Category**: Cell Phones & Accessories (Amazon Reviews 2023)
 
-```bash
-git clone https://github.com/Praagnya/shopRAG.git
-cd shopRAG
+---
+
+## Architecture
+
+### System Components
+
 ```
-
-2. Install dependencies:
-
-**Using uv (Recommended - No Python install required):**
-
-```bash
-# Install uv if you don't have it
-curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
-# Or: pip install uv
-
-# uv will automatically download Python 3.10 if needed and set up everything
-uv sync
-```
-
-**Using pip (Requires Python 3.10+ already installed):**
-
-```bash
-# Create a virtual environment
-python3.10 -m venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-```
-
-3. Verify installation:
-
-```bash
-python --version  # Should show Python 3.10.x
+┌─────────────┐
+│   User      │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│   Gradio UI (Port 7860)         │
+│   - Chat interface              │
+│   - Product selection           │
+│   - Review count slider         │
+└──────────┬──────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────┐
+│   RAG Pipeline                  │
+│   ┌───────────────────────┐    │
+│   │ Input Guardrails      │    │
+│   │ - Length validation   │    │
+│   │ - Prompt injection    │    │
+│   │ - Rate limiting       │    │
+│   └───────────┬───────────┘    │
+│               ▼                 │
+│   ┌───────────────────────┐    │
+│   │ Embedder              │    │
+│   │ BAAI/bge-small-en-v1.5│    │
+│   │ 384-dim vectors       │    │
+│   └───────────┬───────────┘    │
+│               ▼                 │
+│   ┌───────────────────────┐    │
+│   │ Retriever (pgvector)  │    │
+│   │ - Cosine similarity   │    │
+│   │ - Quality filters     │    │
+│   │ - Top-k results       │    │
+│   └───────────┬───────────┘    │
+│               ▼                 │
+│   ┌───────────────────────┐    │
+│   │ LLM Client            │    │
+│   │ - PII removal         │    │
+│   │ - Response generation │    │
+│   │ - Hallucination check │    │
+│   └───────────────────────┘    │
+└─────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────┐
+│   PostgreSQL + pgvector         │
+│   (Digital Ocean Managed DB)    │
+│   - products table (30k)        │
+│   - reviews table (191k+)       │
+│   - Vector similarity index     │
+└─────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────┐
+│   OpenAI API                    │
+│   Model: gpt-4o-mini            │
+│   - Natural language generation │
+└─────────────────────────────────┘
 ```
 
 ---
 
-## Project Overview
+## Tech Stack
 
-Retail companies face increasing challenges in meeting customer expectations for fast, accurate, and personalized assistance. Traditional support systems (email, call centers, and manual review analysis) struggle to scale with e-commerce growth, resulting in delayed responses and higher costs.
+### Backend
+- **Python 3.10** - Core application
+- **PostgreSQL + pgvector** - Vector database for semantic search
+- **psycopg2** - Database adapter
+- **sentence-transformers** - Embedding generation
+- **OpenAI API** - LLM for response generation
 
-This project proposes an AI-powered **Retail Chatbot using Retrieval-Augmented Generation (RAG)** to:
+### Frontend
+- **Gradio** - Interactive web UI
+- **Markdown** - Response formatting
 
-- Answer customer product questions in real time.
-- Summarize customer reviews.
-- Identify product trends and common issues.
-- Provide reliable responses grounded directly in verified customer feedback.
+### Infrastructure
+- **Digital Ocean Droplet** - Application hosting
+- **Digital Ocean Managed PostgreSQL** - Database hosting
+- **uv** - Fast Python package manager
 
-The chatbot uses **Large Language Models (LLMs)** combined with **retrieval from a Vector Database** to ensure responses remain factual, up-to-date, and cost-efficient.
+### MLOps
+- **Git/GitHub** - Version control
+- **Datasets (HuggingFace)** - Data loading
+- **dotenv** - Environment management
 
 ---
 
 ## Dataset
 
-The project uses the **Amazon Reviews 2023 dataset (McAuley Lab)**, which contains millions of reviews across **33 product categories** from **1996–2023**.
+**Amazon Reviews 2023** (McAuley Lab)
 
-Each entry includes:
+- **Subset**: Cell Phones and Accessories
+- **Products**: 30,000 (most recent products)
+- **Reviews**: 191,849 with embeddings
+- **Timespan**: 1996–2023
+- **Source**: https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023
 
-- Customer-written reviews and ratings.
-- Helpful vote counts.
-- Product metadata such as title, category, price, features, and vendor.
-- Product relationships and bundled purchase data.
+### Data Schema
 
-This dataset enables:
+**Products Table:**
+```sql
+- asin (TEXT PRIMARY KEY)
+- title (TEXT)
+- main_category (VARCHAR(255))
+- average_rating (REAL)
+- rating_number (INTEGER)
+- price (TEXT)
+- features (TEXT)  -- JSON array
+- description (TEXT)
+- store (VARCHAR(255))
+```
 
-- Semantic search over customer feedback.
-- Trend analysis over time.
-- Reliable question-answering grounded in real data.
-
----
-
-## Data Schema
-
-### 1. User Reviews
-
-Each review record includes:
-
-| Field                  | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `rating`               | Numeric satisfaction score (1.0 – 5.0)        |
-| `title`                | Review headline                               |
-| `text`                 | Full review body                              |
-| `images`               | Optional uploaded images                      |
-| `user_id`              | Anonymized reviewer ID                        |
-| `verified_purchase`    | Whether the product was purchased by reviewer |
-| `asin` / `parent_asin` | Product and product-group identifiers         |
-| `timestamp`            | Unix posting time                             |
-| `helpful_vote`         | Number of users marking the review helpful    |
-
----
-
-### 2. Item Metadata
-
-Product catalog records include:
-
-| Field               | Description                                               |
-| ------------------- | --------------------------------------------------------- |
-| `title`             | Product name                                              |
-| `main_category`     | Top-level category                                        |
-| `price`             | Listed price                                              |
-| `store`             | Brand/vendor                                              |
-| `features`          | Key bullet-point specs                                    |
-| `description`       | Long description text                                     |
-| `details`           | Structured attributes (material, brand, dimensions, etc.) |
-| `images` / `videos` | Product media                                             |
-| `bought_together`   | Cross-sell relationships                                  |
-| `average_rating`    | Mean rating from all reviews                              |
-| `rating_number`     | Count of contributing reviews                             |
-| `categories`        | Hierarchical sub-categories                               |
-| `parent_asin`       | Parent product group ID                                   |
+**Reviews Table:**
+```sql
+- id (SERIAL PRIMARY KEY)
+- asin (TEXT)  -- Foreign key to products
+- product_name (TEXT)
+- category (TEXT)
+- review_rating (REAL)
+- verified_purchase (BOOLEAN)
+- helpful_vote (INTEGER)
+- timestamp (BIGINT)
+- review_text (TEXT)
+- embedding (VECTOR(384))  -- pgvector
+```
 
 ---
 
-## Database Design
+## Data Pipeline
 
-The project uses a **Vector Database (ChromaDB)** as the primary backend to enable **semantic search** across reviews and product descriptions.
+### 1. Ingestion
+```bash
+uv run python backend/scripts/ingest_reviews_postgres.py
+```
 
-### Why ChromaDB?
+**Process:**
+1. Load product metadata from HuggingFace
+2. Filter to last 30k products (most recent)
+3. Load reviews for those products
+4. Filter low-quality reviews (length < 10 chars)
+5. Combine review with product context
+6. Generate embeddings (batch size: 512)
+7. Store in PostgreSQL with pgvector
 
-- Fast similarity search using dense embeddings.
-- Easy ingestion and maintenance.
-- Direct integration with Python pipelines.
-- Supports **RAG workflows** without large infrastructure overhead.
+**Performance:**
+- Products/hour: ~15,000
+- Reviews/hour: ~80,000
+- Embedding batch: 512 reviews at once
 
-Future extension:
+### 2. Preprocessing
 
-- **PostgreSQL** for structured analytics and dashboard queries (aggregations, filters).
+**Quality Filters:**
+- Minimum review length: 30 characters
+- Valid ratings only (rating > 0)
+- Remove duplicate reviews
 
----
+**Text Processing:**
+```python
+combined_text = f"""
+Product: {product_name}
+Category: {category}
+Rating: {rating}/5
 
-## Data Preprocessing Pipeline
+Review: {review_text}
+"""
+```
 
-Steps:
-
-1. **Text Cleaning** – Remove HTML, URLs, symbols while preserving meaning.
-2. **Deduplication** – Remove highly similar reviews.
-3. **Missing Values** – Fill defaults or remove incomplete entries.
-4. **Quality Filtering** – Remove overly short or excessively long reviews.
-5. **Feature Engineering** – Create a `combined_text` field from title + body + rating.
-6. **Standardization** – Normalize timestamps, numerics, strings, and booleans.
-
----
-
-## RAG System Architecture
-
-We use **Retrieval-Augmented Generation (RAG)** to avoid costly full-model fine-tuning and to ensure factual accuracy.
-
-### Advantages of RAG
-
-- **Lower cost & rapid updates** — Only the vector database must be refreshed as new reviews arrive.
-- **Reduced hallucinations** — The model answers using retrieved real reviews.
-- **Smaller model footprint** — No massive GPU training required.
-- **Trusted results** — Every response is grounded in customer feedback.
-
----
-
-## RAG Components
-
-### 1. Embedding Model (Retrieval)
-
-Converts questions and reviews into vectors for semantic search.
-
-Options:
-
-- `BAAI/bge-small-en-v1.5`
-- `sentence-transformers/all-MiniLM-L6-v2`
-
-Design goals:
-
-- Fast embedding generation.
-- Low compute consumption.
-- High semantic similarity quality.
+**PII Removal:**
+- Emails → `[EMAIL]`
+- Phone numbers → `[PHONE]`
+- URLs → `[URL]`
+- Credit cards → `[CARD]`
+- SSNs → `[SSN]`
 
 ---
 
-### 2. Language Model (Generation)
+## RAG System
 
-Summarizes retrieved review segments into natural language responses.
+### Retrieval-Augmented Generation (RAG)
 
-Candidate models:
+**Why RAG?**
+- ✅ Grounded in real customer reviews
+- ✅ No model fine-tuning required
+- ✅ Easy to update with new data
+- ✅ Reduced hallucinations
+- ✅ Cost-effective (no GPU training)
 
-- **Mistral 7B**
-- **Llama 3 8B**
+### Query Flow
 
-Deployment:
+1. **Input Validation**
+   - Check query length (3-500 chars)
+   - Detect prompt injection attempts
+   - Rate limit: 20 requests/minute
 
-- Hosted on **DigitalOcean Droplets**.
-- Optional style tuning using **LoRA** for conversational tone only (no full retraining).
+2. **Embedding**
+   - Convert query to 384-dim vector
+   - Model: `BAAI/bge-small-en-v1.5`
 
----
+3. **Retrieval**
+   - Search PostgreSQL using cosine similarity
+   - Apply quality filters
+   - Return top-k reviews (default: 5)
 
-## MLOps Roadmap & Next Steps
+4. **Generation**
+   - Build context from product + reviews
+   - Remove PII from review text
+   - Generate response using OpenAI GPT-4o-mini
+   - Check for hallucinations (word overlap)
 
-Target Internal Completion: **December 5, 2025**  
-Final Review & Presentation Window: **December 6–8, 2025**  
-Final Presentation: **December 9, 2025**
-
-Planned activities:
-
-- Containerized pipeline setup.
-- GPU/CPU inference monitoring.
-- Database ingestion scheduling (batch processing per month).
-- Performance benchmarking.
-- Cost optimization and logging.
-
----
-
-## Guidance Requested from Instruction Team
-
-We seek insights on:
-
-1. Scaling containerized ML services between **DigitalOcean and AWS** (although final hosting remains on DigitalOcean).
-2. Monitoring **GPU utilization and inference workloads**.
-3. Best practices for testing vs training workflows in **RAG-based systems**.
+5. **Response**
+   - Return concise answer (2-3 sentences)
+   - Show number of reviews used
+   - Display product information
 
 ---
 
-## Risks & Mitigation
+## Guardrails
 
-| Risk                | Description                       | Mitigation                                               |
-| ------------------- | --------------------------------- | -------------------------------------------------------- |
-| Compute constraints | Limited GPU for inference testing | Use CPU-optimized embedders and AWS/DigitalOcean credits |
-| Latency             | High retrieval/API delay          | Implement vector caching and pre-indexed embeddings      |
-| Data imbalance      | Category overrepresentation       | Stratified sampling during embedding generation          |
-| Security threats    | API misuse or injection           | Enforce HTTPS, rotate API keys, run validation tests     |
+### 1. Input Guardrails
+```python
+- Length: 3-500 characters
+- Prompt injection detection
+- Rate limiting (20/min per user)
+```
+
+### 2. Retrieval Quality
+```sql
+WHERE LENGTH(review_text) >= 30
+ORDER BY embedding <=> query_vector
+LIMIT 5
+```
+
+### 3. PII Removal
+All review text is sanitized before sending to LLM.
+
+### 4. Hallucination Detection
+```python
+# Lightweight word overlap check
+overlap_ratio = len(response_words ∩ review_words) / len(response_words)
+
+if overlap_ratio < 0.3:
+    log("[HALLUCINATION WARNING]")
+```
+
+### 5. System Prompt Engineering
+```
+CRITICAL RULES:
+1. ONLY use information directly stated in the provided context
+2. DO NOT make assumptions or add information not in the reviews
+3. Keep responses short (2-3 sentences maximum)
+```
 
 ---
 
-## Task Assignments
+## Installation
 
-### Data & Pipeline
+### Prerequisites
 
-- Preprocessing & code setup – **Pragnya & Kyle**
-- Google Colab notebook setup
-- Dataset conversion to vector DB
+- Python 3.10+
+- PostgreSQL with pgvector extension
+- OpenAI API key
+- uv package manager (recommended)
 
-### RAG Development
+### Local Setup
 
-- LLM API connection – **Esai**
-- Guardrails implementation – **Esai**
-- Querying vector DB – **Esai**
-- Reranking vs similarity performance research – **Esai**
+```bash
+# 1. Clone repository
+git clone https://github.com/Praagnya/shopRAG.git
+cd shopRAG
 
-### Infrastructure
+# 2. Install uv (if not installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-- Cloud research & security planning – **Sharanya & Kyler**
-- Droplet setup and documentation
-- VPC & firewall configuration
+# 3. Install dependencies
+uv sync
+
+# 4. Create .env file
+cp .env.example .env
+nano .env  # Add your API keys
+
+# 5. Run data ingestion (optional - data already in DB)
+uv run python backend/scripts/ingest_reviews_postgres.py
+
+# 6. Start the UI
+uv run python frontend/gradio_app.py
+```
+
+### Environment Variables
+
+```bash
+# .env
+DATABASE_URL=postgresql://user:pass@host:port/dbname
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+---
+
+## Usage
+
+### Start the Application
+
+```bash
+cd shopRAG
+uv run python frontend/gradio_app.py
+```
+
+Access at: `http://localhost:7860` or the Gradio share link.
+
+### Example Queries
+
+**Product-Specific (with ASIN):**
+```
+ASIN: B07SKQZSN6
+Query: "Is it durable?"
+```
+
+**Global Search (no ASIN):**
+```
+ASIN: [blank]
+Query: "What are the best iPhone cases under $20?"
+```
+
+### API Usage (Optional)
+
+If FastAPI layer is added:
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How is the battery life?",
+    "product_asin": "B07SKQZSN6",
+    "top_k": 5
+  }'
+```
+
+---
+
+## Project Structure
+
+```
+shopRAG/
+├── backend/
+│   ├── api/
+│   │   └── main.py              # FastAPI endpoints (optional)
+│   ├── config/
+│   │   └── settings.py          # Configuration
+│   ├── scripts/
+│   │   └── ingest_reviews_postgres.py  # Data ingestion
+│   ├── services/
+│   │   ├── embedder.py          # Embedding generation
+│   │   ├── retriever_postgres.py # Vector search
+│   │   ├── llm_client.py        # OpenAI integration
+│   │   ├── rag_pipeline.py      # RAG orchestration
+│   │   └── guardrails.py        # Input validation
+│   └── utils/
+│       └── text_processor.py    # Text utilities
+├── frontend/
+│   └── gradio_app.py            # Gradio UI
+├── data/
+│   └── product_cache.json       # Product metadata
+├── .env                         # Environment variables
+├── pyproject.toml               # Dependencies
+├── uv.lock                      # Lock file
+└── README.md
+```
+
+---
+
+## Deployment
+
+### Digital Ocean Droplet
+
+**Current Setup:**
+- **Droplet**: 4 GB RAM, 2 vCPUs
+- **Database**: Managed PostgreSQL with pgvector
+- **Access**: SSH + Gradio share link
+
+**Deploy Steps:**
+```bash
+# 1. SSH to droplet
+ssh root@<droplet-ip>
+
+# 2. Clone and setup
+cd /root
+git clone https://github.com/Praagnya/shopRAG.git
+cd shopRAG
+
+# 3. Install dependencies
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync
+
+# 4. Configure environment
+cp .env.example .env
+nano .env  # Add DATABASE_URL and OPENAI_API_KEY
+
+# 5. Run application
+uv run python frontend/gradio_app.py
+```
+
+### Docker Deployment (Optional)
+
+```bash
+# Build and run
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+---
+
+## Performance Metrics
+
+### Current Stats
+- **Total Products**: 30,000
+- **Total Reviews**: 191,849
+- **Embedding Dimension**: 384
+- **Average Query Time**: ~2-3 seconds
+- **Database Size**: ~500 MB
+
+### Query Performance
+```
+Embedding: ~50ms
+Retrieval: ~100-200ms
+LLM Generation: ~1-2s
+Total: ~2-3s per query
+```
+
+---
+
+## Monitoring
+
+### Logs
+```bash
+# Application logs
+tail -f /var/log/gradio.log
+
+# Ingestion logs
+tail -f /var/log/shoprag_ingest.log
+
+# System logs
+grep CRON /var/log/syslog
+```
+
+### Database Stats
+```sql
+-- Review count
+SELECT COUNT(*) FROM reviews;
+
+-- Products with reviews
+SELECT COUNT(DISTINCT asin) FROM reviews;
+
+-- Average reviews per product
+SELECT AVG(review_count) FROM (
+    SELECT COUNT(*) as review_count
+    FROM reviews
+    GROUP BY asin
+) subq;
+```
+
+---
+
+## Automation
+
+### Cron Jobs (Weekly Updates)
+
+```bash
+# Add to crontab
+crontab -e
+
+# Run ingestion every Sunday at 2 AM
+0 2 * * 0 /root/shopRAG/scripts/auto_ingest.sh
+```
+
+### Ingestion Script
+```bash
+#!/bin/bash
+cd /root/shopRAG
+git pull
+uv run python backend/scripts/ingest_reviews_postgres.py
+pkill -f gradio_app.py
+nohup uv run python frontend/gradio_app.py > /var/log/gradio.log 2>&1 &
+```
+
+---
+
+## Testing
+
+### Run Tests
+```bash
+# Unit tests
+uv run pytest tests/
+
+# Integration tests
+uv run pytest tests/integration/
+
+# Test specific component
+uv run pytest tests/test_retriever.py
+```
+
+### Manual Testing
+```python
+# Test RAG pipeline
+from backend.services.rag_pipeline import get_rag_pipeline
+
+rag = get_rag_pipeline()
+result = rag.query("Is it durable?", product_asin="B07SKQZSN6")
+print(result['response'])
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Database Connection Timeout**
+```bash
+# Add droplet IP to PostgreSQL trusted sources
+# Digital Ocean → Databases → Settings → Trusted Sources
+```
+
+**2. Empty Responses**
+```bash
+# Check OpenAI model name
+cat backend/config/settings.py | grep OPENAI_MODEL
+# Should be: gpt-4o-mini (not gpt-5-mini)
+```
+
+**3. No Reviews Retrieved**
+```bash
+# Check if reviews exist for ASIN
+uv run python -c "
+import psycopg2, os
+from dotenv import load_dotenv
+load_dotenv()
+conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+cur = conn.cursor()
+cur.execute('SELECT COUNT(*) FROM reviews WHERE asin=%s', ('B07SKQZSN6',))
+print(f'Reviews: {cur.fetchone()[0]}')
+"
+```
+
+**4. Port Already in Use**
+```bash
+# Kill existing Gradio process
+lsof -ti:7860 | xargs kill -9
+```
+
+---
+
+## Future Enhancements
+
+### Planned Features
+- [ ] Conversation history/memory
+- [ ] Multi-turn dialogue support
+- [ ] User authentication
+- [ ] Product recommendations
+- [ ] Sentiment analysis dashboard
+- [ ] A/B testing for prompts
+- [ ] Elasticsearch for hybrid search
+- [ ] Real-time review streaming
+
+### Scaling
+- [ ] Horizontal scaling with load balancer
+- [ ] Redis caching for frequent queries
+- [ ] Microservices architecture
+- [ ] Kubernetes deployment
+- [ ] CI/CD pipeline
+
+---
+
+## Contributing
+
+This is an academic project. For questions or collaboration:
+
+1. Create an issue on GitHub
+2. Submit a pull request
+3. Contact team members
 
 ---
 
 ## References
 
-- Stanford Teaching Commons – _Defining AI and Chatbots_
-- Lewis et al., 2020 – _Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks_
-- DigitalOcean – _ML Deployment Documentation_
-- Cloudian – _Data Backup Best Practices_
+- **Dataset**: McAuley-Lab. (2023). *Amazon Reviews 2023*. HuggingFace.
+- **RAG**: Lewis et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*. arXiv.
+- **pgvector**: Ankane. *pgvector: Open-source vector similarity search for Postgres*.
+- **Embeddings**: BAAI. *BGE: BAAI General Embedding*.
 
 ---
 
 ## License
 
 Academic project developed as part of **MIS 547 – University of Arizona** coursework.
+
+---
+
+## Contact
+
+**Team Members:**
+- Esai Flores
+- Kyle deGuzman
+- Kyler Nats
+- Pragnya Narasimha
+- Sharanya Neelam
+
+**Course**: MIS 547 – Cloud Computing
+**Institution**: University of Arizona
+**Semester**: Fall 2024
+
+---
+
+**Last Updated**: December 2024
