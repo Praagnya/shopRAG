@@ -19,11 +19,11 @@ ShopRAG is an AI-powered chatbot that helps customers make informed purchasing d
 
 ### Key Features
 
-✅ **Real-time Q&A** - Answer product questions instantly using customer reviews
-✅ **Semantic Search** - Find relevant reviews using vector embeddings
-✅ **Guardrails** - Input validation, PII removal, and hallucination detection
-✅ **Scalable** - PostgreSQL + pgvector for production-grade vector search
-✅ **Interactive UI** - Gradio-based chat interface with product filtering
+- **Real-time Q&A** - Answer product questions instantly using customer reviews
+- **Semantic Search** - Find relevant reviews using vector embeddings
+- **Guardrails** - Input validation, PII removal, and hallucination detection
+- **Scalable** - PostgreSQL + pgvector for production-grade vector search
+- **Interactive UI** - Gradio-based chat interface with product filtering
 
 ---
 
@@ -223,11 +223,11 @@ Review: {review_text}
 ### Retrieval-Augmented Generation (RAG)
 
 **Why RAG?**
-- ✅ Grounded in real customer reviews
-- ✅ No model fine-tuning required
-- ✅ Easy to update with new data
-- ✅ Reduced hallucinations
-- ✅ Cost-effective (no GPU training)
+- Grounded in real customer reviews
+- No model fine-tuning required
+- Easy to update with new data
+- Reduced hallucinations
+- Cost-effective (no GPU training)
 
 ### Query Flow
 
