@@ -658,4 +658,4 @@ Academic project developed as part of **MIS 547 – University of Arizona** cour
 
 ---
 
-**Last Updated**: December 2024
+**Last Updated**: December 2025
