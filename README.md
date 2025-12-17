@@ -1,4 +1,4 @@
-# shopRAG: AI-Powered Product Review Chatbot
+# shopRAG: Product Review Chatbot
 
 **MIS 547 – Group 4**
 University of Arizona
@@ -24,6 +24,8 @@ ShopRAG is an AI-powered chatbot that helps customers make informed purchasing d
 - **Guardrails** - Input validation, PII removal, and hallucination detection
 - **Scalable** - PostgreSQL + pgvector for production-grade vector search
 - **Interactive UI** - Gradio-based chat interface with product filtering
+- **Containerized** - Full Docker setup with monitoring (Prometheus + Grafana)
+- **Production-Ready** - FastAPI backend with health checks and metrics
 
 ---
 
@@ -38,6 +40,33 @@ ShopRAG is an AI-powered chatbot that helps customers make informed purchasing d
 ---
 
 ## Architecture
+
+### Docker Containerized Setup
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Docker Network: shoprag                     │
+│                                                              │
+│  ┌──────────┐    ┌──────────┐    ┌───────────┐            │
+│  │ Gradio   │───>│ FastAPI  │───>│ Digital   │ (external) │
+│  │ Frontend │    │ Backend  │    │ Ocean PG  │            │
+│  │  :7860   │    │  :8000   │    │           │            │
+│  └──────────┘    └────┬─────┘    └───────────┘            │
+│                       │ /metrics                            │
+│                  ┌────▼──────┐                              │
+│                  │Prometheus │                              │
+│                  │  :9090    │                              │
+│                  └────┬──────┘                              │
+│                  ┌────▼──────┐                              │
+│                  │ Grafana   │                              │
+│                  │  :3000    │                              │
+│                  └───────────┘                              │
+│                                                              │
+│  ┌──────────────────────┐                                   │
+│  │ Data Ingestion       │ (on-demand)                       │
+│  └──────────────────────┘                                   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### System Components
 
@@ -118,8 +147,10 @@ ShopRAG is an AI-powered chatbot that helps customers make informed purchasing d
 - **Markdown** - Response formatting
 
 ### Infrastructure
+- **Docker & Docker Compose** - Containerized deployment
 - **Digital Ocean Droplet** - Application hosting
 - **Digital Ocean Managed PostgreSQL** - Database hosting
+- **Prometheus & Grafana** - Monitoring and metrics
 - **uv** - Fast Python package manager
 
 ### MLOps
@@ -298,6 +329,10 @@ CRITICAL RULES:
 
 ## Installation
 
+**Recommended**: Use [Docker deployment](#docker-deployment-recommended) for the quickest setup with monitoring included.
+
+For local development without Docker, follow the steps below.
+
 ### Prerequisites
 
 - Python 3.10+
@@ -386,7 +421,9 @@ curl -X POST http://localhost:8000/api/v1/query \
 shopRAG/
 ├── backend/
 │   ├── api/
-│   │   └── main.py              # FastAPI endpoints (optional)
+│   │   ├── main.py              # FastAPI application
+│   │   └── routes/
+│   │       └── rag.py           # RAG endpoints
 │   ├── config/
 │   │   └── settings.py          # Configuration
 │   ├── scripts/
@@ -403,10 +440,26 @@ shopRAG/
 │   └── gradio_app.py            # Gradio UI
 ├── data/
 │   └── product_cache.json       # Product metadata
+├── monitoring/
+│   ├── prometheus.yml           # Prometheus config
+│   └── grafana/
+│       ├── provisioning/        # Grafana datasources
+│       └── dashboards/          # Pre-built dashboards
+├── scripts/
+│   └── docker-dev.sh            # Docker helper script
+├── Dockerfile.backend           # Backend container
+├── Dockerfile.frontend          # Frontend container
+├── Dockerfile.ingest            # Ingestion container
+├── docker-compose.yml           # Service orchestration
+├── docker-compose.override.yml  # Development overrides
+├── Makefile                     # Quick commands
+├── .dockerignore                # Docker build exclusions
+├── .env.docker                  # Environment template
 ├── .env                         # Environment variables
 ├── pyproject.toml               # Dependencies
 ├── uv.lock                      # Lock file
-└── README.md
+├── README.md                    # This file
+└── DOCKER_README.md             # Docker setup guide
 ```
 
 ---
@@ -442,18 +495,77 @@ nano .env  # Add DATABASE_URL and OPENAI_API_KEY
 uv run python frontend/gradio_app.py
 ```
 
-### Docker Deployment (Optional)
+### Docker Deployment (Recommended)
+
+**Full containerized setup with monitoring stack**
+
+#### Prerequisites
+- Docker Desktop (or Docker Engine + Docker Compose)
+- Digital Ocean PostgreSQL database
+- OpenAI API key
+- At least 8GB RAM allocated to Docker
+
+#### Quick Start
 
 ```bash
-# Build and run
+# 1. Configure environment
+cp .env.docker .env
+nano .env  # Add OPENAI_API_KEY and DATABASE_URL
+
+# 2. Build and start all services
+make build
+make up
+
+# 3. Access applications
+# - Frontend (Gradio UI): http://localhost:7860
+# - Backend API: http://localhost:8000
+# - API Documentation: http://localhost:8000/docs
+# - Prometheus: http://localhost:9090
+# - Grafana: http://localhost:3000 (admin/admin)
+
+# 4. Run data ingestion (optional)
+make ingest
+```
+
+#### Docker Services
+
+The Docker Compose setup includes:
+- **Backend** (FastAPI) - Port 8000
+- **Frontend** (Gradio) - Port 7860
+- **Prometheus** - Metrics collection on port 9090
+- **Grafana** - Dashboards on port 3000
+- **Ingest** - On-demand data ingestion job
+
+#### Common Commands
+
+```bash
+make build       # Build all Docker images
+make up          # Start all services
+make down        # Stop all services
+make logs        # View all logs
+make health      # Check service health
+make restart     # Restart all services
+make clean       # Remove containers and volumes
+```
+
+#### Alternative: Using Docker Compose Directly
+
+```bash
+# Build and start
+docker-compose build
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop
+# Stop services
 docker-compose down
+
+# Run data ingestion
+docker-compose --profile ingest run --rm ingest
 ```
+
+For detailed Docker setup instructions, see [DOCKER_README.md](DOCKER_README.md).
 
 ---
 
@@ -478,7 +590,53 @@ Total: ~2-3s per query
 
 ## Monitoring
 
-### Logs
+### Prometheus Metrics (Docker Setup)
+
+Access Prometheus at http://localhost:9090
+
+Available metrics:
+- `rag_queries_total` - Total RAG queries
+- `rag_llm_calls_total` - Total LLM API calls
+- `rag_pipeline_latency_ms` - RAG pipeline latency
+- `rag_embedding_latency_ms` - Embedding latency
+- `rag_retrieval_latency_ms` - Retrieval latency
+- `rag_llm_latency_ms` - LLM latency
+- `rag_errors_total` - Total errors
+- `rag_guardrail_failures_total` - Guardrail rejections
+- `rag_active_requests` - Active requests
+- `llm_tokens_used_total` - Token usage
+
+### Grafana Dashboards (Docker Setup)
+
+1. Access Grafana at http://localhost:3000
+2. Login with `admin` / `admin`
+3. Navigate to "shopRAG Overview Dashboard"
+
+Dashboard shows:
+- Request rate and latency trends
+- LLM call rate and error rate
+- Active requests and products loaded
+- Component-level latency breakdown
+- Token usage tracking
+
+### Application Logs
+
+**Docker Deployment:**
+```bash
+# View all logs
+make logs
+
+# Backend logs only
+make logs-backend
+
+# Frontend logs only
+make logs-frontend
+
+# Follow logs in real-time
+docker-compose logs -f
+```
+
+**Local Deployment:**
 ```bash
 # Application logs
 tail -f /var/log/gradio.log
@@ -599,6 +757,13 @@ lsof -ti:7860 | xargs kill -9
 
 ## Future Enhancements
 
+### Completed ✓
+- [x] Docker containerization with monitoring
+- [x] Prometheus metrics collection
+- [x] Grafana dashboards
+- [x] FastAPI backend with health checks
+- [x] Production-ready deployment setup
+
 ### Planned Features
 - [ ] Conversation history/memory
 - [ ] Multi-turn dialogue support
@@ -612,9 +777,9 @@ lsof -ti:7860 | xargs kill -9
 ### Scaling
 - [ ] Horizontal scaling with load balancer
 - [ ] Redis caching for frequent queries
-- [ ] Microservices architecture
 - [ ] Kubernetes deployment
-- [ ] CI/CD pipeline
+- [ ] CI/CD pipeline with automated testing
+- [ ] Auto-scaling based on metrics
 
 ---
 
