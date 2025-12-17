@@ -16,7 +16,7 @@ CHROMA_DB_PATH.mkdir(exist_ok=True)
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = "gpt-5-mini"  # or "gpt-4"
+OPENAI_MODEL = "gpt-4o-mini"  # or "gpt-4"
 
 # Embedding Configuration
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"

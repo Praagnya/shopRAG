@@ -1,0 +1,24 @@
+version: '3.8'
+
+# This file is automatically loaded by docker-compose
+# It provides development-friendly overrides
+
+services:
+  backend:
+    # Enable hot-reload for development
+    command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Override with read-write for development
+      - ./backend:/app/backend
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  frontend:
+    # Enable auto-reload for Gradio
+    environment:
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+    volumes:
+      # Override with read-write for development
+      - ./frontend:/app/frontend
+      - ./backend:/app/backend

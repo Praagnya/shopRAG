@@ -27,11 +27,25 @@ def load_products():
     return products
 
 
-# Initialize RAG pipeline
-print("Loading RAG Pipeline...")
-rag_pipeline = get_rag_pipeline()
+# Initialize RAG pipeline lazily
+rag_pipeline = None
 products_cache = load_products()
 print(f"✓ Loaded {len(products_cache)} products")
+
+
+def get_or_init_pipeline():
+    """Get RAG pipeline, initializing on first use."""
+    global rag_pipeline
+    if rag_pipeline is None:
+        print("Loading RAG Pipeline...")
+        try:
+            rag_pipeline = get_rag_pipeline()
+            print("✓ RAG Pipeline loaded successfully")
+        except Exception as e:
+            print(f"Warning: Could not initialize RAG pipeline: {e}")
+            print("Pipeline will retry on next query.")
+            raise
+    return rag_pipeline
 
 
 def extract_asin_from_choice(choice):
@@ -89,7 +103,8 @@ def chat_function(message, history, selected_product, top_k):
 
     # Query the RAG pipeline
     try:
-        result = rag_pipeline.query(
+        pipeline = get_or_init_pipeline()
+        result = pipeline.query(
             message,
             top_k=top_k,
             product_asin=product_asin

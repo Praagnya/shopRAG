@@ -1,0 +1,58 @@
+FROM python:3.10-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+
+# Copy dependency files
+COPY --chown=appuser:appuser pyproject.toml ./
+
+# Install Python dependencies
+RUN uv pip install --system --no-cache \
+    chromadb>=1.3.5 \
+    datasets>=2.19.0 \
+    pandas>=2.3.3 \
+    sentence-transformers>=5.1.2 \
+    tqdm>=4.67.1 \
+    fastapi>=0.115.0 \
+    uvicorn>=0.34.0 \
+    pydantic>=2.0.0 \
+    openai>=1.0.0 \
+    python-dotenv>=1.2.1 \
+    gradio>=6.0.2 \
+    psycopg2-binary>=2.9.11 \
+    pgvector>=0.4.2 \
+    prometheus-client
+
+# Copy application code
+COPY --chown=appuser:appuser backend/ ./backend/
+COPY --chown=appuser:appuser frontend/ ./frontend/
+COPY --chown=appuser:appuser data/ ./data/
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+
+# Switch to non-root user
+USER appuser
+
+# Expose frontend port
+EXPOSE 7860
+
+# Health check (Gradio doesn't have a built-in health endpoint, check process)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+    CMD pgrep -f "gradio_app.py" || exit 1
+
+# Start Gradio frontend
+CMD ["python", "frontend/gradio_app.py"]

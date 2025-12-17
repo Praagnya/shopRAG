@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Backend API Service
+  # ==========================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: shoprag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - RAG_MODE=${RAG_MODE:-FULL}
+      - RETRIEVER_MODE=${RETRIEVER_MODE:-postgres}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    volumes:
+      # Mount data directory for product_cache.json
+      - ./data:/app/data
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Development: hot-reload (optional, comment out for production)
+      - ./backend:/app/backend:ro
+    networks:
+      - shoprag
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.shoprag.service=backend"
+      - "com.shoprag.environment=development"
+
+  # ==========================================
+  # Frontend Gradio Service
+  # ==========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: shoprag-frontend
+    ports:
+      - "7860:7860"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - RAG_MODE=${RAG_MODE:-FULL}
+      - RETRIEVER_MODE=${RETRIEVER_MODE:-postgres}
+    volumes:
+      # Mount data directory for product_cache.json
+      - ./data:/app/data:ro
+      # Development: hot-reload (optional, comment out for production)
+      - ./frontend:/app/frontend:ro
+      - ./backend:/app/backend:ro
+    networks:
+      - shoprag
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "com.shoprag.service=frontend"
+      - "com.shoprag.environment=development"
+
+  # ==========================================
+  # Data Ingestion Service (Manual/Scheduled)
+  # ==========================================
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    container_name: shoprag-ingest
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      # Mount data directory to save product_cache.json
+      - ./data:/app/data
+    networks:
+      - shoprag
+    profiles:
+      - ingest  # Only runs when explicitly called with --profile ingest
+    labels:
+      - "com.shoprag.service=ingest"
+      - "com.shoprag.environment=development"
+
+  # ==========================================
+  # Prometheus Monitoring
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: shoprag-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+    networks:
+      - shoprag
+    depends_on:
+      - backend
+    restart: unless-stopped
+    labels:
+      - "com.shoprag.service=prometheus"
+      - "com.shoprag.environment=development"
+
+  # ==========================================
+  # Grafana Dashboards
+  # ==========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: shoprag-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - shoprag
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    labels:
+      - "com.shoprag.service=grafana"
+      - "com.shoprag.environment=development"
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  shoprag:
+    driver: bridge
+    name: shoprag-network
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  prometheus_data:
+    name: shoprag-prometheus-data
+  grafana_data:
+    name: shoprag-grafana-data
