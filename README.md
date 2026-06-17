@@ -1,16 +1,5 @@
 # shopRAG: Product Review Chatbot
 
-**MIS 547 – Group 4**
-University of Arizona
-
-## Team Members
-
-- Esai Flores
-- Kyle deGuzman
-- Kyler Nats
-- Pragnya Narasimha
-- Sharanya Neelam
-
 ---
 
 ## Project Overview
